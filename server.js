@@ -21,20 +21,138 @@ app.use(express.static("clients"));
 // Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// HTML форма для фотографа
+// HTML форма для фотографа с корпоративным дизайном
 app.get("/", (req, res) => {
   res.send(`
-    <h2>Загрузка AR-файлов</h2>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-      <p>Фото (jpg): <input type="file" name="photo" accept="image/jpeg" required></p>
-      <p>Видео (mp4): <input type="file" name="video" accept="video/mp4" required></p>
-      <p>Маркер (mind): <input type="file" name="mind" accept=".mind" required></p>
-      <button type="submit">Загрузить</button>
-    </form>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+.upload-container {
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  width: 420px;
+}
+h2 {
+  text-align: center;
+  color: #2c3e50;
+  margin-bottom: 25px;
+  font-weight: 600;
+}
+input[type="file"] {
+  display: block;
+  width: 100%;
+  margin: 12px 0 20px 0;
+  padding: 10px;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  font-size: 14px;
+}
+button {
+  width: 100%;
+  padding: 14px;
+  background-color: #2c3e50;
+  color: #ffffff;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+button:hover {
+  background-color: #1a252f;
+}
+#progressBar {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 20px;
+  height: 20px;
+  display: none;
+}
+#progressBar div {
+  height: 100%;
+  width: 0%;
+  background-color: #2c3e50;
+  text-align: center;
+  color: white;
+  line-height: 20px;
+  font-size: 12px;
+  transition: width 0.3s;
+}
+#status { margin-top: 10px; text-align: center; font-size: 14px; color: #34495e; }
+</style>
+</head>
+<body>
+<div class="upload-container">
+<h2>TamerlanMotion 1.0</h2>
+<form id="uploadForm" enctype="multipart/form-data">
+  <input type="file" name="photo" accept="image/jpeg" required>
+  <input type="file" name="video" accept="video/mp4" required>
+  <input type="file" name="mind" accept=".mind" required>
+  <button type="submit">Загрузить</button>
+</form>
+<div id="progressBar"><div></div></div>
+<div id="status"></div>
+</div>
+
+<script>
+const form = document.getElementById('uploadForm');
+const progressBar = document.getElementById('progressBar');
+const progress = progressBar.firstElementChild;
+const status = document.getElementById('status');
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const files = new FormData(form);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/upload', true);
+
+  xhr.upload.onprogress = (event) => {
+    if (event.lengthComputable) {
+      const percent = Math.round((event.loaded / event.total) * 100);
+      progress.style.width = percent + '%';
+      progress.textContent = percent + '%';
+      progressBar.style.display = 'block';
+    }
+  };
+
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      status.innerHTML = xhr.responseText;
+      progress.style.width = '100%';
+      progress.textContent = 'Готово!';
+    } else {
+      status.innerHTML = '<p style="color:red;">Ошибка загрузки</p>';
+    }
+  };
+
+  xhr.send(files);
+});
+</script>
+</body>
+</html>
   `);
 });
 
-// Обработка загрузки
+// === остальная часть сервера без изменений ===
+
 app.post(
   "/upload",
   upload.fields([
@@ -50,7 +168,6 @@ app.post(
 
       const { photo, video, mind } = req.files;
 
-      // Сохраняем файлы
       const photoPath = path.join(clientFolder, photo[0].originalname);
       const videoPath = path.join(clientFolder, video[0].originalname);
       const mindPath = path.join(clientFolder, mind[0].originalname);
@@ -59,7 +176,6 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Создание index.html с кнопкой разблокировки видео
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -78,7 +194,6 @@ a-scene { width:100%; height:100%; }
 <body>
 <div id="container">
   <button id="startButton">Нажмите, чтобы включить камеру</button>
-
   <a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     <a-assets>
       <video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
@@ -89,59 +204,36 @@ a-scene { width:100%; height:100%; }
     </a-entity>
   </a-scene>
 </div>
-
 <script>
 const button = document.getElementById('startButton');
 const videoEl = document.getElementById('video1');
 const videoPlane = document.getElementById('videoPlane');
 const targetEntity = document.querySelector('[mindar-image-target]');
 let isPlaying = false;
-
 button.addEventListener('click', async () => {
-  try {
-    videoEl.muted = true;
-    await videoEl.play();
-    videoEl.pause();
-    videoEl.currentTime = 0;
-    button.style.display = 'none';
-  } catch(err) { console.error(err); alert('Не удалось включить камеру'); }
+  try { videoEl.muted = true; await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0; button.style.display = 'none'; } 
+  catch(err) { console.error(err); alert('Не удалось включить камеру'); }
 });
-
 videoEl.addEventListener('loadedmetadata', () => {
   const aspect = videoEl.videoWidth / videoEl.videoHeight;
-  const baseWidth = 1;
-  const baseHeight = baseWidth / aspect;
+  const baseWidth = 1; const baseHeight = baseWidth / aspect;
   videoPlane.setAttribute('width', baseWidth);
   videoPlane.setAttribute('height', baseHeight);
 });
-
 targetEntity.addEventListener('targetFound', () => {
-  if(!isPlaying){
-    videoEl.muted = false;
-    videoEl.currentTime = 0;
-    videoEl.play();
-    isPlaying = true;
-  }
+  if(!isPlaying){ videoEl.muted = false; videoEl.currentTime = 0; videoEl.play(); isPlaying = true; }
 });
-
-targetEntity.addEventListener('targetLost', () => {
-  videoEl.pause();
-  videoEl.currentTime = 0;
-  isPlaying = false;
-});
+targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime = 0; isPlaying = false; });
 </script>
 </body>
 </html>
 `;
-      const htmlPath = path.join(clientFolder, "index.html");
-      fs.writeFileSync(htmlPath, htmlContent);
+      fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // Генерация QR-кода
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
-      // Вставка QR на фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -149,7 +241,6 @@ targetEntity.addEventListener('targetLost', () => {
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Пуш в GitHub
       const files = fs.readdirSync(clientFolder);
       for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
@@ -162,7 +253,6 @@ targetEntity.addEventListener('targetLost', () => {
         });
       }
 
-      // Результат для фотографа
       res.send(`
         <h3>Готово ✅</h3>
         <p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
