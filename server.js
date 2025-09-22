@@ -21,7 +21,7 @@ app.use(express.static("clients"));
 // Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// HTML форма для фотографа с корпоративным дизайном
+// HTML форма для фотографа с корпоративным дизайном и инструкцией
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -52,63 +52,78 @@ h2 {
   margin-bottom: 25px;
   font-weight: 600;
 }
-input[type="file"] {
-  display: block;
+button, input[type="file"] {
   width: 100%;
-  margin: 12px 0 20px 0;
-  padding: 10px;
-  border: 1px solid #d1d5da;
-  border-radius: 6px;
+  margin: 10px 0;
+  padding: 12px;
   font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5da;
 }
 button {
-  width: 100%;
-  padding: 14px;
   background-color: #2c3e50;
   color: #ffffff;
-  font-size: 16px;
   border: none;
-  border-radius: 8px;
-  cursor: pointer;
   font-weight: 500;
+  cursor: pointer;
   transition: background 0.3s ease;
 }
-button:hover {
-  background-color: #1a252f;
+button:hover { background-color: #1a252f; }
+.instruction {
+  font-size: 14px;
+  color: #34495e;
+  line-height: 1.6;
+  margin-top: 15px;
 }
+.instruction p { margin: 6px 0; }
 #progressBar {
-  width: 100%;
-  background-color: #e0e0e0;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-top: 20px;
-  height: 20px;
-  display: none;
+  display:none; 
+  width:100%; 
+  background:#e0e0e0; 
+  border-radius:6px; 
+  margin-top:15px; 
+  height:20px;
 }
 #progressBar div {
-  height: 100%;
-  width: 0%;
-  background-color: #2c3e50;
-  text-align: center;
-  color: white;
-  line-height: 20px;
-  font-size: 12px;
+  height:100%;
+  width:0%;
+  background:#2c3e50;
+  text-align:center;
+  color:white;
+  line-height:20px;
+  font-size:12px;
   transition: width 0.3s;
 }
-#status { margin-top: 10px; text-align: center; font-size: 14px; color: #34495e; }
+#status { margin-top:10px; text-align:center; font-size:14px; color:#34495e; }
 </style>
 </head>
 <body>
 <div class="upload-container">
-<h2>TamerlanMotion 1.0</h2>
-<form id="uploadForm" enctype="multipart/form-data">
-  <input type="file" name="photo" accept="image/jpeg" required>
-  <input type="file" name="video" accept="video/mp4" required>
-  <input type="file" name="mind" accept=".mind" required>
-  <button type="submit">Загрузить</button>
-</form>
-<div id="progressBar"><div></div></div>
-<div id="status"></div>
+  <h2>TamerlanMotion 1.0</h2>
+
+  <!-- Кнопка открытия генератора mind -->
+  <button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">
+    Открыть генератор .mind
+  </button>
+
+  <!-- Мини-инструкция -->
+  <div class="instruction">
+    <p><strong>Шаг 1:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind.</p>
+    <p><strong>Шаг 2:</strong> Загрузите фото и создайте маркер.</p>
+    <p><strong>Шаг 3:</strong> Скачайте полученный файл <code>.mind</code>.</p>
+    <p><strong>Шаг 4:</strong> Загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
+  </div>
+
+  <!-- Форма загрузки -->
+  <form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="photo" accept="image/jpeg" required>
+    <input type="file" name="video" accept="video/mp4" required>
+    <input type="file" name="mind" accept=".mind" required>
+    <button type="submit">Загрузить</button>
+  </form>
+
+  <div id="progressBar"><div></div></div>
+  <div id="status"></div>
 </div>
 
 <script>
@@ -120,7 +135,6 @@ const status = document.getElementById('status');
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   const files = new FormData(form);
-
   const xhr = new XMLHttpRequest();
   xhr.open('POST', '/upload', true);
 
@@ -151,8 +165,7 @@ form.addEventListener('submit', (e) => {
   `);
 });
 
-// === остальная часть сервера без изменений ===
-
+// === Обработка загрузки файлов, генерация HTML, QR и пуш в GitHub ===
 app.post(
   "/upload",
   upload.fields([
