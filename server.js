@@ -5,6 +5,9 @@ import path from "path";
 import QRCode from "qrcode";
 import Jimp from "jimp";
 import { Octokit } from "@octokit/rest";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +24,14 @@ app.use(express.static("clients"));
 // Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// HTML форма для фотографа с корпоративным дизайном и инструкцией
+// Загружаем коды подписки
+const codesPath = path.join(process.cwd(), "codes.json");
+let codes = {};
+if (fs.existsSync(codesPath)) {
+  codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
+}
+
+// Форма загрузки с проверкой кода
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -52,28 +62,26 @@ h2 {
   margin-bottom: 25px;
   font-weight: 600;
 }
-label {
-  display: block;
-  margin-top: 15px;
-  font-weight: 500;
-  color: #34495e;
-}
-input[type="file"], button {
+input[type="file"], input[type="text"] {
   width: 100%;
-  margin-top: 8px;
+  margin: 10px 0;
   padding: 12px;
   font-size: 14px;
   border-radius: 6px;
   border: 1px solid #d1d5da;
 }
 button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
   background-color: #2c3e50;
   color: #ffffff;
+  font-size: 16px;
   border: none;
-  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 500;
   transition: background 0.3s ease;
-  margin-top: 20px;
 }
 button:hover { background-color: #1a252f; }
 .instruction {
@@ -113,25 +121,19 @@ button:hover { background-color: #1a252f; }
     Открыть генератор .mind
   </button>
 
-  <!-- Мини-инструкция -->
   <div class="instruction">
-    <p><strong>Шаг 1:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind.</p>
-    <p><strong>Шаг 2:</strong> Загрузите фото и создайте маркер.</p>
-    <p><strong>Шаг 3:</strong> Скачайте полученный файл <code>.mind</code>.</p>
-    <p><strong>Шаг 4:</strong> Загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
+    <p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
+    <p><strong>Шаг 2:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind и создать маркер.</p>
+    <p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
+    <p><strong>Шаг 4:</strong> Введите секретный код и загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
   </div>
 
   <!-- Форма загрузки -->
   <form id="uploadForm" enctype="multipart/form-data">
-    <label for="photo">Фото (JPEG):</label>
-    <input type="file" id="photo" name="photo" accept="image/jpeg" required>
-
-    <label for="video">Видео (MP4):</label>
-    <input type="file" id="video" name="video" accept="video/mp4" required>
-
-    <label for="mind">Маркер (.mind):</label>
-    <input type="file" id="mind" name="mind" accept=".mind" required>
-
+    <input type="text" name="secretCode" placeholder="Введите секретный код" required>
+    <input type="file" name="photo" accept="image/jpeg" required>
+    <input type="file" name="video" accept="video/mp4" required>
+    <input type="file" name="mind" accept=".mind" required>
     <button type="submit">Загрузить</button>
   </form>
 
@@ -166,7 +168,7 @@ form.addEventListener('submit', (e) => {
       progress.style.width = '100%';
       progress.textContent = 'Готово!';
     } else {
-      status.innerHTML = '<p style="color:red;">Ошибка загрузки</p>';
+      status.innerHTML = '<p style="color:red;">' + xhr.responseText + '</p>';
     }
   };
 
@@ -178,16 +180,30 @@ form.addEventListener('submit', (e) => {
   `);
 });
 
-// === Обработка загрузки файлов, генерация HTML, QR и пуш в GitHub ===
+// === Обработка загрузки файлов с проверкой кода ===
 app.post(
   "/upload",
   upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "video", maxCount: 1 },
     { name: "mind", maxCount: 1 },
+    { name: "secretCode", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
+      const form = req.body;
+      const code = form.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
+
+      // Проверка кода
+      if (!code || !codes[code]) {
+        return res.status(403).send("Неверный или просроченный секретный код");
+      }
+
+      const expiry = new Date(codes[code]);
+      if (expiry < new Date()) {
+        return res.status(403).send("Срок действия секретного кода истёк");
+      }
+
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
       fs.mkdirSync(clientFolder);
@@ -202,6 +218,7 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
+      // Генерация HTML с видео
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -256,10 +273,12 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
 `;
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
+      // Генерация QR-кода
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
+      // Вставка QR на фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -267,6 +286,7 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
+      // Пуш в GitHub
       const files = fs.readdirSync(clientFolder);
       for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
@@ -288,10 +308,4 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
         </a>
       `);
     } catch (err) {
-      console.error(err);
-      res.status(500).send("Ошибка при обработке ❌");
-    }
-  }
-);
-
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+      console.error
