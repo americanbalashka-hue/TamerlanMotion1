@@ -52,9 +52,15 @@ h2 {
   margin-bottom: 25px;
   font-weight: 600;
 }
-button, input[type="file"] {
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: 500;
+  color: #34495e;
+}
+input[type="file"], button {
   width: 100%;
-  margin: 10px 0;
+  margin-top: 8px;
   padding: 12px;
   font-size: 14px;
   border-radius: 6px;
@@ -67,6 +73,7 @@ button {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.3s ease;
+  margin-top: 20px;
 }
 button:hover { background-color: #1a252f; }
 .instruction {
@@ -116,9 +123,15 @@ button:hover { background-color: #1a252f; }
 
   <!-- Форма загрузки -->
   <form id="uploadForm" enctype="multipart/form-data">
-    <input type="file" name="photo" accept="image/jpeg" required>
-    <input type="file" name="video" accept="video/mp4" required>
-    <input type="file" name="mind" accept=".mind" required>
+    <label for="photo">Фото (JPEG):</label>
+    <input type="file" id="photo" name="photo" accept="image/jpeg" required>
+
+    <label for="video">Видео (MP4):</label>
+    <input type="file" id="video" name="video" accept="video/mp4" required>
+
+    <label for="mind">Маркер (.mind):</label>
+    <input type="file" id="mind" name="mind" accept=".mind" required>
+
     <button type="submit">Загрузить</button>
   </form>
 
