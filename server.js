@@ -40,105 +40,44 @@ app.get("/", (req, res) => {
 <meta charset="UTF-8">
 <title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
 <style>
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #f4f6f8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  margin: 0;
-}
-.upload-container {
-  background: #ffffff;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  width: 420px;
-}
-h2 {
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 25px;
-  font-weight: 600;
-}
-input[type="file"], input[type="text"] {
-  width: 100%;
-  margin: 10px 0;
-  padding: 12px;
-  font-size: 14px;
-  border-radius: 6px;
-  border: 1px solid #d1d5da;
-}
-button {
-  width: 100%;
-  margin-top: 12px;
-  padding: 14px;
-  background-color: #2c3e50;
-  color: #ffffff;
-  font-size: 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s ease;
-}
-button:hover { background-color: #1a252f; }
-.instruction {
-  font-size: 14px;
-  color: #34495e;
-  line-height: 1.6;
-  margin-top: 15px;
-}
-.instruction p { margin: 6px 0; }
-#progressBar {
-  display:none; 
-  width:100%; 
-  background:#e0e0e0; 
-  border-radius:6px; 
-  margin-top:15px; 
-  height:20px;
-}
-#progressBar div {
-  height:100%;
-  width:0%;
-  background:#2c3e50;
-  text-align:center;
-  color:white;
-  line-height:20px;
-  font-size:12px;
-  transition: width 0.3s;
-}
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f4f6f8; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+.upload-container { background:#fff; padding:40px 30px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.1); width:420px; }
+h2 { text-align:center; color:#2c3e50; margin-bottom:25px; font-weight:600; }
+input[type="file"], input[type="text"] { width:100%; margin:10px 0; padding:12px; font-size:14px; border-radius:6px; border:1px solid #d1d5da; }
+button { width:100%; margin-top:12px; padding:14px; background-color:#2c3e50; color:#fff; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition: background 0.3s ease; }
+button:hover { background-color:#1a252f; }
+.instruction { font-size:14px; color:#34495e; line-height:1.6; margin-top:15px; }
+.instruction p { margin:6px 0; }
+#progressBar { display:none; width:100%; background:#e0e0e0; border-radius:6px; margin-top:15px; height:20px; }
+#progressBar div { height:100%; width:0%; background:#2c3e50; text-align:center; color:white; line-height:20px; font-size:12px; transition: width 0.3s; }
 #status { margin-top:10px; text-align:center; font-size:14px; color:#34495e; }
 </style>
 </head>
 <body>
 <div class="upload-container">
-  <h2>TamerlanMotion 1.0</h2>
+<h2>TamerlanMotion 1.0</h2>
 
-  <!-- Кнопка открытия генератора mind -->
-  <button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">
-    Открыть генератор .mind
-  </button>
+<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">
+Открыть генератор .mind
+</button>
 
-  <div class="instruction">
-    <p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
-    <p><strong>Шаг 2:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind и создать маркер.</p>
-    <p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
-    <p><strong>Шаг 4:</strong> Введите секретный код и загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
-  </div>
+<div class="instruction">
+<p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
+<p><strong>Шаг 2:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind и создать маркер.</p>
+<p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
+<p><strong>Шаг 4:</strong> Введите секретный код и загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
+</div>
 
-  <!-- Форма загрузки -->
-  <form id="uploadForm" enctype="multipart/form-data">
-    <input type="text" name="secretCode" placeholder="Введите секретный код" required>
-    <input type="file" name="photo" accept="image/jpeg" required>
-    <input type="file" name="video" accept="video/mp4" required>
-    <input type="file" name="mind" accept=".mind" required>
-    <button type="submit">Загрузить</button>
-  </form>
+<form id="uploadForm" enctype="multipart/form-data">
+<input type="text" name="secretCode" placeholder="Введите секретный код" required>
+<input type="file" name="photo" accept="image/jpeg" required>
+<input type="file" name="video" accept="video/mp4" required>
+<input type="file" name="mind" accept=".mind" required>
+<button type="submit">Загрузить</button>
+</form>
 
-  <div id="progressBar"><div></div></div>
-  <div id="status"></div>
+<div id="progressBar"><div></div></div>
+<div id="status"></div>
 </div>
 
 <script>
@@ -154,7 +93,7 @@ form.addEventListener('submit', (e) => {
   xhr.open('POST', '/upload', true);
 
   xhr.upload.onprogress = (event) => {
-    if (event.lengthComputable) {
+    if(event.lengthComputable) {
       const percent = Math.round((event.loaded / event.total) * 100);
       progress.style.width = percent + '%';
       progress.textContent = percent + '%';
@@ -163,7 +102,7 @@ form.addEventListener('submit', (e) => {
   };
 
   xhr.onload = () => {
-    if (xhr.status === 200) {
+    if(xhr.status === 200) {
       status.innerHTML = xhr.responseText;
       progress.style.width = '100%';
       progress.textContent = 'Готово!';
@@ -180,7 +119,7 @@ form.addEventListener('submit', (e) => {
   `);
 });
 
-// === Обработка загрузки файлов с проверкой кода ===
+// Обработка загрузки файлов с проверкой кода
 app.post(
   "/upload",
   upload.fields([
@@ -191,16 +130,15 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const form = req.body;
-      const code = form.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
+      const code = req.body.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
 
       // Проверка кода
-      if (!code || !codes[code]) {
+      if(!code || !codes[code]) {
         return res.status(403).send("Неверный или просроченный секретный код");
       }
 
       const expiry = new Date(codes[code]);
-      if (expiry < new Date()) {
+      if(expiry < new Date()) {
         return res.status(403).send("Срок действия секретного кода истёк");
       }
 
@@ -236,16 +174,16 @@ a-scene { width:100%; height:100%; }
 </head>
 <body>
 <div id="container">
-  <button id="startButton">Нажмите, чтобы включить камеру</button>
-  <a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
-    <a-assets>
-      <video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
-    </a-assets>
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-video id="videoPlane" src="#video1"></a-video>
-    </a-entity>
-  </a-scene>
+<button id="startButton">Нажмите, чтобы включить камеру</button>
+<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+<a-assets>
+<video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
+</a-assets>
+<a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<a-entity mindar-image-target="targetIndex: 0">
+<a-video id="videoPlane" src="#video1"></a-video>
+</a-entity>
+</a-scene>
 </div>
 <script>
 const button = document.getElementById('startButton');
@@ -254,7 +192,7 @@ const videoPlane = document.getElementById('videoPlane');
 const targetEntity = document.querySelector('[mindar-image-target]');
 let isPlaying = false;
 button.addEventListener('click', async () => {
-  try { videoEl.muted = true; await videoEl.play(); videoEl.pause(); videoEl.currentTime = 0; button.style.display = 'none'; } 
+  try { videoEl.muted=true; await videoEl.play(); videoEl.pause(); videoEl.currentTime=0; button.style.display='none'; }
   catch(err) { console.error(err); alert('Не удалось включить камеру'); }
 });
 videoEl.addEventListener('loadedmetadata', () => {
@@ -263,10 +201,8 @@ videoEl.addEventListener('loadedmetadata', () => {
   videoPlane.setAttribute('width', baseWidth);
   videoPlane.setAttribute('height', baseHeight);
 });
-targetEntity.addEventListener('targetFound', () => {
-  if(!isPlaying){ videoEl.muted = false; videoEl.currentTime = 0; videoEl.play(); isPlaying = true; }
-});
-targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime = 0; isPlaying = false; });
+targetEntity.addEventListener('targetFound', () => { if(!isPlaying){ videoEl.muted=false; videoEl.currentTime=0; videoEl.play(); isPlaying=true; }});
+targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime=0; isPlaying=false; });
 </script>
 </body>
 </html>
@@ -286,9 +222,9 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Пуш в GitHub
+      // Публикация в GitHub
       const files = fs.readdirSync(clientFolder);
-      for (const file of files) {
+      for(const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
         await octokit.repos.createOrUpdateFileContents({
           owner: process.env.GITHUB_OWNER,
@@ -300,12 +236,18 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
       }
 
       res.send(`
-        <h3>Готово ✅</h3>
-        <p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
-        <p>QR-код встроен в фото (скачай ниже):</p>
-        <a href="/client${timestamp}/final_with_qr.jpg" download>
-          <img src="/client${timestamp}/final_with_qr.jpg" width="400">
-        </a>
-      `);
-    } catch (err) {
-      console.error
+<h3>Готово ✅</h3>
+<p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
+<p>QR-код встроен в фото (скачайте ниже):</p>
+<a href="/client${timestamp}/final_with_qr.jpg" download>
+<img src="/client${timestamp}/final_with_qr.jpg" width="400">
+</a>
+`);
+    } catch(err) {
+      console.error(err);
+      res.status(500).send("Ошибка при обработке ❌");
+    }
+  }
+);
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
