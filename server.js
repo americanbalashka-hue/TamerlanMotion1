@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 import { Octokit } from "@octokit/rest";
 import dotenv from "dotenv";
+import ffmpeg from "fluent-ffmpeg";   // ✅ добавлено
 
 dotenv.config();
 
@@ -19,7 +20,8 @@ if (!fs.existsSync(CLIENTS_DIR)) fs.mkdirSync(CLIENTS_DIR);
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-app.use(express.static("clients"));
+// ✅ Кэширование статики (ускоряет загрузку сайта клиентом)
+app.use(express.static("clients", { maxAge: "30d", immutable: true }));
 
 // Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -31,7 +33,46 @@ if (fs.existsSync(codesPath)) {
   codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
 }
 
-// Форма загрузки с проверкой кода
+// 🔥 Функция: сжатие + слияние видео с фото до ≤5 МБ
+async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath) {
+  let targetBitrate = 1000; // стартовый битрейт (кбит/с)
+
+  while (true) {
+    await new Promise((resolve, reject) => {
+      ffmpeg(rawVideoPath)
+        .input(photoPath) // фото как подложка
+        .complexFilter([
+          "[1:v]scale=640:-1[vid];[0:v][vid]overlay=(W-w)/2:(H-h)/2"
+        ])
+        .outputOptions([
+          "-c:v libx264",
+          "-preset veryfast",
+          "-tune film",
+          "-movflags +faststart",
+          `-b:v ${targetBitrate}k`,
+          "-maxrate " + targetBitrate + "k",
+          "-bufsize " + targetBitrate * 2 + "k",
+          "-c:a aac",
+          "-b:a 128k"
+        ])
+        .on("end", resolve)
+        .on("error", reject)
+        .save(compressedVideoPath);
+    });
+
+    // проверка размера
+    const stats = fs.statSync(compressedVideoPath);
+    const sizeMB = stats.size / (1024 * 1024);
+
+    if (sizeMB <= 5) break; // ✅ если ≤5 МБ → готово
+    targetBitrate = Math.max(300, targetBitrate - 200); // уменьшаем битрейт
+    console.log(`⚠️ Видео ${sizeMB.toFixed(2)} МБ. Пробуем битрейт ${targetBitrate}k...`);
+  }
+
+  console.log("✅ Видео успешно сжато и слито с фото:", compressedVideoPath);
+}
+
+// Форма загрузки
 app.get("/", (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -119,7 +160,7 @@ form.addEventListener('submit', (e) => {
   `);
 });
 
-// Обработка загрузки файлов с проверкой кода
+// Обработка загрузки файлов
 app.post(
   "/upload",
   upload.fields([
@@ -149,14 +190,20 @@ app.post(
       const { photo, video, mind } = req.files;
 
       const photoPath = path.join(clientFolder, photo[0].originalname);
-      const videoPath = path.join(clientFolder, video[0].originalname);
+      const rawVideoPath = path.join(clientFolder, "raw_" + video[0].originalname);
+      const compressedVideoPath = path.join(clientFolder, video[0].originalname);
       const mindPath = path.join(clientFolder, mind[0].originalname);
 
       fs.writeFileSync(photoPath, photo[0].buffer);
-      fs.writeFileSync(videoPath, video[0].buffer);
+      fs.writeFileSync(rawVideoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Генерация HTML с видео
+      // ✅ Новый вызов
+      await compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath);
+
+      fs.unlinkSync(rawVideoPath); // удаляем оригинал после сжатия
+
+      // Генерация HTML
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -175,9 +222,9 @@ a-scene { width:100%; height:100%; }
 <body>
 <div id="container">
 <button id="startButton">Нажмите, чтобы включить камеру</button>
-<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="antialias: true, precision: mediump" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 <a-assets>
-<video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
+<video id="video1" src="${video[0].originalname}" preload="metadata" playsinline webkit-playsinline muted></video>
 </a-assets>
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 <a-entity mindar-image-target="targetIndex: 0">
@@ -209,7 +256,7 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
 `;
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // Генерация QR-кода
+      // QR-код
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
