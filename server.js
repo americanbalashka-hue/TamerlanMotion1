@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import multer from "multer";
 import fs from "fs";
@@ -15,30 +16,28 @@ const PORT = process.env.PORT || 3000;
 const CLIENTS_DIR = path.join(process.cwd(), "clients");
 if (!fs.existsSync(CLIENTS_DIR)) fs.mkdirSync(CLIENTS_DIR);
 
-// Настройка multer
+// Multer setup
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 app.use(express.static("clients"));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Octokit для GitHub
+// Octokit for GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// Загрузка кодов подписки
+// Load secret codes
 const codesPath = path.join(process.cwd(), "codes.json");
 let codes = {};
 if (fs.existsSync(codesPath)) {
   codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
 }
 
-// === Страница для фотографов и загрузки ===
+// Serve upload page
 app.get("/", (req, res) => {
-  res.sendFile(path.join(process.cwd(), "frontend", "upload.html")); // вынесли дизайн отдельно
+  res.sendFile(path.join(process.cwd(), "upload.html"));
 });
 
-// === Обработка загрузки файлов с проверкой кода ===
+// Handle upload
 app.post(
   "/upload",
   upload.fields([
@@ -49,12 +48,18 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const code = req.body.secretCode;
+      const code =
+        req.body.secretCode ||
+        (req.files.secretCode && req.files.secretCode[0].buffer.toString());
 
-      if (!code || !codes[code]) return res.status(403).send("Неверный или просроченный секретный код");
-
+      // Check code
+      if (!code || !codes[code]) {
+        return res.status(403).send("Неверный или просроченный секретный код");
+      }
       const expiry = new Date(codes[code]);
-      if (expiry < new Date()) return res.status(403).send("Срок действия секретного кода истёк");
+      if (expiry < new Date()) {
+        return res.status(403).send("Срок действия секретного кода истёк");
+      }
 
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
@@ -70,7 +75,7 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Генерация HTML
+      // Generate AR HTML
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -79,9 +84,17 @@ app.post(
 <title>AR Фото-видео</title>
 <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+body{margin:0;background:black;height:100vh;width:100vw;overflow:hidden;}
+#container{position:fixed;top:0;left:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:black;}
+#startButton{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:20px 40px;font-size:18px;background:#1e90ff;color:white;border:none;border-radius:8px;cursor:pointer;z-index:10;}
+a-scene{width:100%;height:100%;}
+</style>
 </head>
 <body>
-<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded>
+<div id="container">
+<button id="startButton">Нажмите, чтобы включить камеру</button>
+<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 <a-assets>
 <video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
 </a-assets>
@@ -90,17 +103,38 @@ app.post(
 <a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
 </a-entity>
 </a-scene>
+</div>
+<script>
+const button = document.getElementById('startButton');
+const videoEl = document.getElementById('video1');
+const videoPlane = document.getElementById('videoPlane');
+const targetEntity = document.querySelector('[mindar-image-target]');
+let isPlaying = false;
+button.addEventListener('click', async () => {
+  try { videoEl.muted=true; await videoEl.play(); videoEl.pause(); videoEl.currentTime=0; button.style.display='none'; }
+  catch(err) { console.error(err); alert('Не удалось включить камеру'); }
+});
+videoEl.addEventListener('loadedmetadata', () => {
+  const aspect = videoEl.videoWidth / videoEl.videoHeight;
+  const baseWidth = 1; const baseHeight = baseWidth / aspect;
+  videoPlane.setAttribute('width', baseWidth);
+  videoPlane.setAttribute('height', baseHeight);
+});
+targetEntity.addEventListener('targetFound', () => { if(!isPlaying){ videoEl.muted=false; videoEl.currentTime=0; videoEl.play(); isPlaying=true; }});
+targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime=0; isPlaying=false; });
+</script>
 </body>
 </html>
 `;
+
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // Генерация QR
+      // Generate QR code
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
-      // Вставка QR на фото
+      // Overlay QR on photo
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -108,7 +142,7 @@ app.post(
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Публикация в GitHub
+      // Upload to GitHub
       const files = fs.readdirSync(clientFolder);
       for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
@@ -121,101 +155,19 @@ app.post(
         });
       }
 
-      res.json({
-        message: "Файлы успешно загружены",
-        clientUrl,
-        qr: `/client${timestamp}/qr.png`,
-        finalPhoto: `/client${timestamp}/final_with_qr.jpg`,
-      });
+      res.send(`
+<h3>Готово ✅</h3>
+<p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
+<p>QR-код встроен в фото:</p>
+<a href="/client${timestamp}/final_with_qr.jpg" download>
+<img src="/client${timestamp}/final_with_qr.jpg" width="400">
+</a>
+`);
     } catch (err) {
       console.error(err);
-      res.status(500).send("Ошибка при обработке");
+      res.status(500).send("Ошибка при обработке ❌");
     }
   }
 );
 
-// === Админка ===
-const ADMIN_CODE = process.env.ADMIN_CODE || "supersecret";
-
-function checkAdmin(req, res, next) {
-  const code = req.query.code || req.body.code;
-  if (code === ADMIN_CODE) return next();
-  return res.status(403).send("Доступ запрещен");
-}
-
-// Страница админки
-app.get("/admin", checkAdmin, (req, res) => {
-  let tableRows = "";
-  for (const c in codes) {
-    const expiry = new Date(codes[c]);
-    const remainingDays = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
-    tableRows += `<tr><td>${c}</td><td>${expiry.toLocaleString()}</td><td>${remainingDays}</td></tr>`;
-  }
-
-  res.send(`
-<h2>Админка TamerlanMotion</h2>
-<h3>Созданные коды</h3>
-<table border="1" cellpadding="5" cellspacing="0">
-<tr><th>Код</th><th>Истекает</th><th>Осталось дней</th></tr>
-${tableRows}
-</table>
-<h3>Создать новый код</h3>
-<form method="POST" action="/admin/createCode">
-<input type="hidden" name="code" value="${ADMIN_CODE}">
-Код: <input type="text" name="newCode" required>
-Срок действия (дней): <input type="number" name="days" value="7" min="1" required>
-<button type="submit">Создать</button>
-</form>
-`);
-});
-
-// Создание нового кода
-app.post("/admin/createCode", (req, res) => {
-  const { code, newCode, days } = req.body;
-  if (code !== ADMIN_CODE) return res.status(403).send("Доступ запрещен");
-
-  const expiryDate = new Date();
-  expiryDate.setDate(expiryDate.getDate() + parseInt(days));
-  codes[newCode] = expiryDate.toISOString();
-  fs.writeFileSync(codesPath, JSON.stringify(codes, null, 2));
-  res.redirect(`/admin?code=${ADMIN_CODE}`);
-});
-
-// Удаление кода
-app.post("/admin/deleteCode", (req, res) => {
-  const { code, delCode } = req.body;
-  if (code !== ADMIN_CODE) return res.status(403).send("Доступ запрещен");
-
-  delete codes[delCode];
-  fs.writeFileSync(codesPath, JSON.stringify(codes, null, 2));
-  res.redirect(`/admin?code=${ADMIN_CODE}`);
-});
-
-// Список проектов
-app.get("/admin/projects", checkAdmin, (req, res) => {
-  const folders = fs.readdirSync(CLIENTS_DIR).filter(f => fs.statSync(path.join(CLIENTS_DIR, f)).isDirectory());
-  const projects = folders.map(f => ({
-    folder: f,
-    url: `/clients/${f}/index.html`,
-    qr: `/clients/${f}/qr.png`,
-    photo: `/clients/${f}/final_with_qr.jpg`
-  }));
-  res.json(projects);
-});
-
-// Удаление проекта
-app.post("/admin/deleteProject", checkAdmin, (req, res) => {
-  const { folder } = req.body;
-  const projectPath = path.join(CLIENTS_DIR, folder);
-  if (fs.existsSync(projectPath)) {
-    fs.rmSync(projectPath, { recursive: true, force: true });
-    res.sendStatus(200);
-  } else {
-    res.status(404).send("Проект не найден");
-  }
-});
-
-// === Запуск сервера ===
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
