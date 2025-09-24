@@ -20,106 +20,25 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 app.use(express.static("clients"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// Загружаем коды подписки
+// Загрузка кодов подписки
 const codesPath = path.join(process.cwd(), "codes.json");
 let codes = {};
 if (fs.existsSync(codesPath)) {
   codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
 }
 
-// Форма загрузки с проверкой кода
+// === Страница для фотографов и загрузки ===
 app.get("/", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
-<style>
-body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f4f6f8; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
-.upload-container { background:#fff; padding:40px 30px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,0.1); width:420px; }
-h2 { text-align:center; color:#2c3e50; margin-bottom:25px; font-weight:600; }
-input[type="file"], input[type="text"] { width:100%; margin:10px 0; padding:12px; font-size:14px; border-radius:6px; border:1px solid #d1d5da; }
-button { width:100%; margin-top:12px; padding:14px; background-color:#2c3e50; color:#fff; font-size:16px; border:none; border-radius:8px; cursor:pointer; font-weight:500; transition: background 0.3s ease; }
-button:hover { background-color:#1a252f; }
-.instruction { font-size:14px; color:#34495e; line-height:1.6; margin-top:15px; }
-.instruction p { margin:6px 0; }
-#progressBar { display:none; width:100%; background:#e0e0e0; border-radius:6px; margin-top:15px; height:20px; }
-#progressBar div { height:100%; width:0%; background:#2c3e50; text-align:center; color:white; line-height:20px; font-size:12px; transition: width 0.3s; }
-#status { margin-top:10px; text-align:center; font-size:14px; color:#34495e; }
-</style>
-</head>
-<body>
-<div class="upload-container">
-<h2>TamerlanMotion 1.0</h2>
-
-<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">
-Открыть генератор .mind
-</button>
-
-<div class="instruction">
-<p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
-<p><strong>Шаг 2:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind и создать маркер.</p>
-<p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
-<p><strong>Шаг 4:</strong> Введите секретный код и загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
-</div>
-
-<form id="uploadForm" enctype="multipart/form-data">
-<input type="text" name="secretCode" placeholder="Введите секретный код" required>
-<input type="file" name="photo" accept="image/jpeg" required>
-<input type="file" name="video" accept="video/mp4" required>
-<input type="file" name="mind" accept=".mind" required>
-<button type="submit">Загрузить</button>
-</form>
-
-<div id="progressBar"><div></div></div>
-<div id="status"></div>
-</div>
-
-<script>
-const form = document.getElementById('uploadForm');
-const progressBar = document.getElementById('progressBar');
-const progress = progressBar.firstElementChild;
-const status = document.getElementById('status');
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const files = new FormData(form);
-  const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/upload', true);
-
-  xhr.upload.onprogress = (event) => {
-    if(event.lengthComputable) {
-      const percent = Math.round((event.loaded / event.total) * 100);
-      progress.style.width = percent + '%';
-      progress.textContent = percent + '%';
-      progressBar.style.display = 'block';
-    }
-  };
-
-  xhr.onload = () => {
-    if(xhr.status === 200) {
-      status.innerHTML = xhr.responseText;
-      progress.style.width = '100%';
-      progress.textContent = 'Готово!';
-    } else {
-      status.innerHTML = '<p style="color:red;">' + xhr.responseText + '</p>';
-    }
-  };
-
-  xhr.send(files);
-});
-</script>
-</body>
-</html>
-  `);
+  res.sendFile(path.join(process.cwd(), "frontend", "upload.html")); // вынесли дизайн отдельно
 });
 
-// Обработка загрузки файлов с проверкой кода
+// === Обработка загрузки файлов с проверкой кода ===
 app.post(
   "/upload",
   upload.fields([
@@ -130,17 +49,12 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const code = req.body.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
+      const code = req.body.secretCode;
 
-      // Проверка кода
-      if(!code || !codes[code]) {
-        return res.status(403).send("Неверный или просроченный секретный код");
-      }
+      if (!code || !codes[code]) return res.status(403).send("Неверный или просроченный секретный код");
 
       const expiry = new Date(codes[code]);
-      if(expiry < new Date()) {
-        return res.status(403).send("Срок действия секретного кода истёк");
-      }
+      if (expiry < new Date()) return res.status(403).send("Срок действия секретного кода истёк");
 
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
@@ -156,7 +70,7 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Генерация HTML с видео и прозрачностью 65%
+      // Генерация HTML
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -165,17 +79,9 @@ app.post(
 <title>AR Фото-видео</title>
 <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-<style>
-body { margin:0; background:black; height:100vh; width:100vw; overflow:hidden; }
-#container { position:fixed; top:0; left:0; width:100vw; height:100vh; display:flex; justify-content:center; align-items:center; background:black; }
-#startButton { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding:20px 40px; font-size:18px; background:#1e90ff; color:white; border:none; border-radius:8px; cursor:pointer; z-index:10; }
-a-scene { width:100%; height:100%; }
-</style>
 </head>
 <body>
-<div id="container">
-<button id="startButton">Нажмите, чтобы включить камеру</button>
-<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+<a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded>
 <a-assets>
 <video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
 </a-assets>
@@ -184,32 +90,12 @@ a-scene { width:100%; height:100%; }
 <a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
 </a-entity>
 </a-scene>
-</div>
-<script>
-const button = document.getElementById('startButton');
-const videoEl = document.getElementById('video1');
-const videoPlane = document.getElementById('videoPlane');
-const targetEntity = document.querySelector('[mindar-image-target]');
-let isPlaying = false;
-button.addEventListener('click', async () => {
-  try { videoEl.muted=true; await videoEl.play(); videoEl.pause(); videoEl.currentTime=0; button.style.display='none'; }
-  catch(err) { console.error(err); alert('Не удалось включить камеру'); }
-});
-videoEl.addEventListener('loadedmetadata', () => {
-  const aspect = videoEl.videoWidth / videoEl.videoHeight;
-  const baseWidth = 1; const baseHeight = baseWidth / aspect;
-  videoPlane.setAttribute('width', baseWidth);
-  videoPlane.setAttribute('height', baseHeight);
-});
-targetEntity.addEventListener('targetFound', () => { if(!isPlaying){ videoEl.muted=false; videoEl.currentTime=0; videoEl.play(); isPlaying=true; }});
-targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime=0; isPlaying=false; });
-</script>
 </body>
 </html>
 `;
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // Генерация QR-кода
+      // Генерация QR
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
@@ -224,7 +110,7 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
 
       // Публикация в GitHub
       const files = fs.readdirSync(clientFolder);
-      for(const file of files) {
+      for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
         await octokit.repos.createOrUpdateFileContents({
           owner: process.env.GITHUB_OWNER,
@@ -235,19 +121,101 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
         });
       }
 
-      res.send(`
-<h3>Готово ✅</h3>
-<p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
-<p>QR-код встроен в фото (скачайте ниже):</p>
-<a href="/client${timestamp}/final_with_qr.jpg" download>
-<img src="/client${timestamp}/final_with_qr.jpg" width="400">
-</a>
-`);
-    } catch(err) {
+      res.json({
+        message: "Файлы успешно загружены",
+        clientUrl,
+        qr: `/client${timestamp}/qr.png`,
+        finalPhoto: `/client${timestamp}/final_with_qr.jpg`,
+      });
+    } catch (err) {
       console.error(err);
-      res.status(500).send("Ошибка при обработке ❌");
+      res.status(500).send("Ошибка при обработке");
     }
   }
 );
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+// === Админка ===
+const ADMIN_CODE = process.env.ADMIN_CODE || "supersecret";
+
+function checkAdmin(req, res, next) {
+  const code = req.query.code || req.body.code;
+  if (code === ADMIN_CODE) return next();
+  return res.status(403).send("Доступ запрещен");
+}
+
+// Страница админки
+app.get("/admin", checkAdmin, (req, res) => {
+  let tableRows = "";
+  for (const c in codes) {
+    const expiry = new Date(codes[c]);
+    const remainingDays = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+    tableRows += `<tr><td>${c}</td><td>${expiry.toLocaleString()}</td><td>${remainingDays}</td></tr>`;
+  }
+
+  res.send(`
+<h2>Админка TamerlanMotion</h2>
+<h3>Созданные коды</h3>
+<table border="1" cellpadding="5" cellspacing="0">
+<tr><th>Код</th><th>Истекает</th><th>Осталось дней</th></tr>
+${tableRows}
+</table>
+<h3>Создать новый код</h3>
+<form method="POST" action="/admin/createCode">
+<input type="hidden" name="code" value="${ADMIN_CODE}">
+Код: <input type="text" name="newCode" required>
+Срок действия (дней): <input type="number" name="days" value="7" min="1" required>
+<button type="submit">Создать</button>
+</form>
+`);
+});
+
+// Создание нового кода
+app.post("/admin/createCode", (req, res) => {
+  const { code, newCode, days } = req.body;
+  if (code !== ADMIN_CODE) return res.status(403).send("Доступ запрещен");
+
+  const expiryDate = new Date();
+  expiryDate.setDate(expiryDate.getDate() + parseInt(days));
+  codes[newCode] = expiryDate.toISOString();
+  fs.writeFileSync(codesPath, JSON.stringify(codes, null, 2));
+  res.redirect(`/admin?code=${ADMIN_CODE}`);
+});
+
+// Удаление кода
+app.post("/admin/deleteCode", (req, res) => {
+  const { code, delCode } = req.body;
+  if (code !== ADMIN_CODE) return res.status(403).send("Доступ запрещен");
+
+  delete codes[delCode];
+  fs.writeFileSync(codesPath, JSON.stringify(codes, null, 2));
+  res.redirect(`/admin?code=${ADMIN_CODE}`);
+});
+
+// Список проектов
+app.get("/admin/projects", checkAdmin, (req, res) => {
+  const folders = fs.readdirSync(CLIENTS_DIR).filter(f => fs.statSync(path.join(CLIENTS_DIR, f)).isDirectory());
+  const projects = folders.map(f => ({
+    folder: f,
+    url: `/clients/${f}/index.html`,
+    qr: `/clients/${f}/qr.png`,
+    photo: `/clients/${f}/final_with_qr.jpg`
+  }));
+  res.json(projects);
+});
+
+// Удаление проекта
+app.post("/admin/deleteProject", checkAdmin, (req, res) => {
+  const { folder } = req.body;
+  const projectPath = path.join(CLIENTS_DIR, folder);
+  if (fs.existsSync(projectPath)) {
+    fs.rmSync(projectPath, { recursive: true, force: true });
+    res.sendStatus(200);
+  } else {
+    res.status(404).send("Проект не найден");
+  }
+});
+
+// === Запуск сервера ===
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
