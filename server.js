@@ -6,7 +6,6 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 import { Octokit } from "@octokit/rest";
 import dotenv from "dotenv";
-import { exec } from "child_process";
 
 dotenv.config();
 
@@ -16,22 +15,26 @@ const PORT = process.env.PORT || 3000;
 const CLIENTS_DIR = path.join(process.cwd(), "clients");
 if (!fs.existsSync(CLIENTS_DIR)) fs.mkdirSync(CLIENTS_DIR);
 
+// Настройка multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 app.use(express.static("clients"));
 
+// Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
+// Загружаем коды подписки
 const codesPath = path.join(process.cwd(), "codes.json");
 let codes = {};
 if (fs.existsSync(codesPath)) {
   codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
 }
 
-// GET "/" — твоя форма, полностью оставляем
+// Форма загрузки с проверкой кода
 app.get("/", (req, res) => {
-  res.send(`<!DOCTYPE html>
+  res.send(`
+<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -112,10 +115,11 @@ form.addEventListener('submit', (e) => {
 });
 </script>
 </body>
-</html>`);
+</html>
+  `);
 });
 
-// POST "/upload" с интеграцией конвертации MP4 → WebM с альфой
+// Обработка загрузки файлов с проверкой кода
 app.post(
   "/upload",
   upload.fields([
@@ -127,14 +131,23 @@ app.post(
   async (req, res) => {
     try {
       const code = req.body.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
-      if(!code || !codes[code]) return res.status(403).send("Неверный или просроченный секретный код");
-      if(new Date(codes[code]) < new Date()) return res.status(403).send("Срок действия секретного кода истёк");
+
+      // Проверка кода
+      if(!code || !codes[code]) {
+        return res.status(403).send("Неверный или просроченный секретный код");
+      }
+
+      const expiry = new Date(codes[code]);
+      if(expiry < new Date()) {
+        return res.status(403).send("Срок действия секретного кода истёк");
+      }
 
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
       fs.mkdirSync(clientFolder);
 
       const { photo, video, mind } = req.files;
+
       const photoPath = path.join(clientFolder, photo[0].originalname);
       const videoPath = path.join(clientFolder, video[0].originalname);
       const mindPath = path.join(clientFolder, mind[0].originalname);
@@ -143,17 +156,7 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Конвертация MP4 → WebM с альфой
-      const webmPath = path.join(clientFolder, "video.webm");
-      await new Promise((resolve, reject) => {
-        const cmd = `ffmpeg -i "${videoPath}" -c:v libvpx-vp9 -pix_fmt yuva420p -auto-alt-ref 0 -c:a libopus "${webmPath}"`;
-        exec(cmd, (err, stdout, stderr) => {
-          if(err) return reject(stderr);
-          resolve();
-        });
-      });
-
-      // Генерация HTML с WebM видео
+      // Генерация HTML с видео и прозрачностью 30%
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -174,11 +177,11 @@ a-scene { width:100%; height:100%; }
 <button id="startButton">Нажмите, чтобы включить камеру</button>
 <a-scene mindar-image="imageTargetSrc: ${mind[0].originalname};" embedded color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 <a-assets>
-<video id="video1" src="video.webm" preload="auto" playsinline webkit-playsinline muted></video>
+<video id="video1" src="${video[0].originalname}" preload="auto" playsinline webkit-playsinline muted></video>
 </a-assets>
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 <a-entity mindar-image-target="targetIndex: 0">
-<a-video id="videoPlane" src="#video1"></a-video>
+<a-video id="videoPlane" src="#video1" material="opacity: 0.3"></a-video>
 </a-entity>
 </a-scene>
 </div>
@@ -202,13 +205,16 @@ targetEntity.addEventListener('targetFound', () => { if(!isPlaying){ videoEl.mut
 targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime=0; isPlaying=false; });
 </script>
 </body>
-</html>`;
+</html>
+`;
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // QR и Jimp как в оригинале
+      // Генерация QR-кода
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
+
+      // Вставка QR на фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -216,8 +222,9 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
+      // Публикация в GitHub
       const files = fs.readdirSync(clientFolder);
-      for(const file of files){
+      for(const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
         await octokit.repos.createOrUpdateFileContents({
           owner: process.env.GITHUB_OWNER,
@@ -236,7 +243,7 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
 <img src="/client${timestamp}/final_with_qr.jpg" width="400">
 </a>
 `);
-    } catch(err){
+    } catch(err) {
       console.error(err);
       res.status(500).send("Ошибка при обработке ❌");
     }
