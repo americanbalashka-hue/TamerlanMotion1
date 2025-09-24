@@ -11,7 +11,7 @@ import ffmpegPath from "ffmpeg-static"; // ffmpeg бинарь
 
 dotenv.config();
 
-// Указываем путь к ffmpeg (обязательно для сред без системного ffmpeg)
+// Указываем путь к ffmpeg
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Проверка доступности ffmpeg
@@ -33,13 +33,13 @@ if (!fs.existsSync(CLIENTS_DIR)) fs.mkdirSync(CLIENTS_DIR);
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// Кэширование статики (ускоряет загрузку у клиента)
+// Кэширование статики
 app.use(express.static("clients", { maxAge: "30d", immutable: true }));
 
-// Octokit для GitHub (требует GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO в env)
+// Octokit для GitHub
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// Загружаем коды подписки из codes.json (если есть)
+// Загружаем коды подписки
 const codesPath = path.join(process.cwd(), "codes.json");
 let codes = {};
 if (fs.existsSync(codesPath)) {
@@ -53,7 +53,7 @@ if (fs.existsSync(codesPath)) {
 
 // Функция: сжатие + слияние видео с фото до <= 5 МБ
 async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath) {
-  let targetBitrate = 1000; // кбит/с, стартовый
+  let targetBitrate = 1000; // кбит/с
 
   while (true) {
     await new Promise((resolve, reject) => {
@@ -96,7 +96,7 @@ async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPat
   console.log("Видео сжато и слито:", compressedVideoPath);
 }
 
-// Главная страница — форма загрузки
+// Главная страница
 app.get("/", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="ru">
@@ -159,12 +159,10 @@ form.addEventListener('submit', (e) => {
   };
 
   xhr.onload = () => {
-    if(xhr.status === 200) {
-      status.innerHTML = xhr.responseText;
+    status.innerHTML = xhr.responseText;
+    if(xhr.status === 200){
       progress.style.width = '100%';
       progress.textContent = 'Готово!';
-    } else {
-      status.innerHTML = '<p style="color:red;">' + xhr.responseText + '</p>';
     }
   };
 
@@ -319,8 +317,10 @@ targetEntity.addEventListener('targetLost', () => {
 <p>QR-код встроен в фото (скачайте ниже):</p>
 <a href="/client${timestamp}/final_with_qr.jpg" download><img src="/client${timestamp}/final_with_qr.jpg" width="400"></a>`);
     } catch (err) {
+      // ✅ Новый вывод полной ошибки
       console.error("Ошибка /upload:", err);
-      res.status(500).send("Ошибка при обработке. Смотри логи сервера.");
+      console.error(err.stack);
+      res.status(500).send(`Ошибка при обработке: ${err.message}`);
     }
   }
 );
