@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
@@ -19,7 +19,7 @@ body{
 }
 .upload-container{
   background:#fff;
-  padding:40px 25px;
+  padding:50px 25px 40px 25px;
   border-radius:20px;
   box-shadow:0 20px 60px rgba(0,0,0,0.2);
   width:100%;
@@ -31,16 +31,18 @@ body{
   animation:fadeInUp 0.8s forwards;
 }
 @keyframes fadeInUp{
-  to{opacity:1; transform:translateY(0);}
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
 }
-.upload-container:hover{transform:translateY(-3px);}
 h2{
   text-align:center;
   color:#166534;
-  margin-bottom:25px;
-  font-weight:800;
-  font-size:26px;
-  letter-spacing:1px;
+  margin-bottom:30px;
+  font-weight:900;
+  font-size:28px;
+  letter-spacing:1.5px;
 }
 #mindButton{
   display:block;
@@ -53,7 +55,7 @@ h2{
   cursor:pointer;
   color:white;
   background:linear-gradient(90deg,#16a34a,#22c55e);
-  margin-bottom:20px;
+  margin-bottom:25px;
   transition:all 0.3s ease;
   box-shadow:0 5px 15px rgba(0,0,0,0.2);
 }
@@ -62,33 +64,26 @@ h2{
   transform:translateY(-2px);
 }
 .instruction{
-  font-size:15px;
+  font-size:14px;
   color:#065f46;
   line-height:1.6;
   margin-bottom:20px;
 }
-.instruction p{margin:8px 0;}
-
-/* Лейблы с иконками */
-form label{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin:6px 0 2px 0;
+.instruction p{
+  margin:8px 0;
+}
+/* Подписи для инпутов */
+.input-label{
+  font-size:14px;
   font-weight:600;
   color:#047857;
-  font-size:15px;
+  margin-top:12px;
+  display:block;
 }
-form label img{
-  width:20px;
-  height:20px;
-}
-
-/* Поля ввода */
 input[type="text"], input[type="file"]{
   width:100%;
   padding:14px 12px;
-  margin:6px 0 12px 0;
+  margin-top:4px;
   border-radius:10px;
   border:1px solid #a7f3d0;
   font-size:15px;
@@ -110,7 +105,7 @@ button[type="submit"]{
   color:white;
   cursor:pointer;
   transition:all 0.3s ease;
-  margin-top:12px;
+  margin-top:15px;
   box-shadow:0 5px 15px rgba(0,0,0,0.2);
 }
 button[type="submit"]:hover{
@@ -180,22 +175,23 @@ button[type="submit"]:active{
   filter: drop-shadow(0 0 8px rgba(22,163,74,0.8));
   border:2px solid #16a34a;
 }
-
-/* Кнопка Telegram голубая */
 .contact{
-  margin-top:20px;
+  margin-top:25px;
   text-align:center;
   opacity:0;
   transform:translateY(20px);
   animation:fadeInUpContact 1s forwards 1s;
 }
 @keyframes fadeInUpContact{
-  to{opacity:1; transform:translateY(0);}
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
 }
-.tg-btn-blue{
+.tg-btn{
   text-decoration:none;
   color:white;
-  background:linear-gradient(135deg,#33a1dc,#1c8adb);
+  background:#0099ff;
   padding:12px 18px;
   border-radius:15px;
   font-weight:700;
@@ -203,25 +199,37 @@ button[type="submit"]:active{
   display:inline-flex;
   align-items:center;
   gap:8px;
-  box-shadow:0 5px 20px rgba(51,161,220,0.4);
+  box-shadow:0 5px 20px rgba(0,153,255,0.4);
   transition:all 0.4s ease, box-shadow 0.4s ease;
 }
-.tg-btn-blue:hover{
+.tg-btn:hover{
   transform:translateY(-5px) scale(1.05);
-  box-shadow:0 10px 30px rgba(51,161,220,0.6);
-  background:linear-gradient(135deg,#1c8adb,#33a1dc);
+  box-shadow:0 10px 30px rgba(0,153,255,0.6);
 }
-.tg-btn-blue svg{
+.tg-btn svg{
   width:20px;
   height:20px;
   fill:white;
+  transition: transform 0.4s ease;
+}
+.tg-btn:hover svg{
+  transform:rotate(-10deg) scale(1.1);
 }
 @media(max-width:480px){
-  .upload-container{padding:30px 20px;}
-  h2{font-size:22px;}
-  input[type="text"], input[type="file"], button[type="submit"]{padding:14px;font-size:15px;}
-  .preview-container img,.preview-container video{width:80px;height:80px;}
-  form label img{width:18px;height:18px;}
+  .upload-container{
+    padding:30px 20px;
+  }
+  h2{
+    font-size:26px;
+  }
+  input[type="text"], input[type="file"], button[type="submit"]{
+    padding:14px;
+    font-size:15px;
+  }
+  .preview-container img,.preview-container video{
+    width:80px;
+    height:80px;
+  }
 }
 </style>
 </head>
@@ -235,28 +243,25 @@ button[type="submit"]:active{
 <p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
 <p><strong>Шаг 4:</strong> Введите секретный код и загрузите фото, видео и .mind в форму.</p>
 </div>
-<form id="uploadForm" enctype="multipart/form-data">
-<label for="photo"><img src="https://img.icons8.com/ios-filled/50/000000/camera.png"/> Фото (JPEG):</label>
+
+<!-- Метки для каждого инпута -->
+<label class="input-label" for="photo">Фото (JPEG):</label>
 <input type="file" name="photo" accept="image/jpeg" required>
-
-<label for="video"><img src="https://img.icons8.com/ios-filled/50/000000/video.png"/> Видео (MP4):</label>
+<label class="input-label" for="video">Видео (MP4):</label>
 <input type="file" name="video" accept="video/mp4" required>
-
-<label for="mind"><img src="https://img.icons8.com/ios-filled/50/000000/puzzle.png"/> Файл .mind:</label>
+<label class="input-label" for="mind">Файл .mind:</label>
 <input type="file" name="mind" accept=".mind" required>
-
-<label for="secretCode"><img src="https://img.icons8.com/ios-filled/50/000000/key.png"/> Секретный код:</label>
+<label class="input-label" for="secretCode">Секретный код:</label>
 <input type="text" name="secretCode" placeholder="Введите секретный код" required>
 
 <button type="submit">Загрузить</button>
-</form>
-
 <div class="preview-container" id="previewContainer"></div>
 <div id="progressBar"><div></div></div>
 <div id="status"></div>
 
+<!-- Кнопка Telegram -->
 <div class="contact">
-  <a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
+  <a href="https://t.me/tommy8873" target="_blank" class="tg-btn">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
       <path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.7 81.6l-20.3 95.8c-1.5 6.9-5.5 8.6-11.1 5.3l-30.7-22.7-14.8 14.3c-1.6 1.6-2.9 2.9-5.4 2.9l2-28.6 52-47.1c2.3-2 0.4-3.1-3.2-1.1l-64.3 40.5-27.7-8.6c-6-1.9-6.1-6-1.3-8.9l107.5-41.5c5-1.9 9.3 1.1 7.7 8.2z"/>
     </svg>
@@ -266,7 +271,7 @@ button[type="submit"]:active{
 </div>
 
 <script>
-const form=document.getElementById('uploadForm');
+const form=document.querySelector('form');
 const progressBar=document.getElementById('progressBar');
 const progress=progressBar.firstElementChild;
 const status=document.getElementById('status');
