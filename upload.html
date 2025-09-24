@@ -13,16 +13,17 @@ body{
   min-height:100vh;
   display:flex;
   justify-content:center;
-  align-items:flex-start;
-  padding:40px;
+  align-items:center;
+  padding:20px;
+  overflow-x:auto;
 }
 .upload-container{
   background:#fff;
-  padding:60px 50px;
+  padding:50px 50px;
   border-radius:25px;
   box-shadow:0 25px 70px rgba(0,0,0,0.25);
-  width:950px;
-  max-width:95%;
+  width:700px;
+  min-width:700px; /* фиксированная ширина для ПК */
   transition:all 0.4s ease;
   opacity:0;
   transform:translateY(40px);
@@ -34,35 +35,35 @@ body{
 h2{
   text-align:center;
   color:#166534;
-  margin-bottom:40px;
+  margin-bottom:35px;
   font-weight:900;
-  font-size:40px;
+  font-size:36px;
   letter-spacing:1.5px;
 }
 #mindButton{
   display:block;
   width:100%;
-  padding:20px;
-  font-size:20px;
+  padding:18px;
+  font-size:18px;
   font-weight:700;
   border:none;
   border-radius:15px;
   cursor:pointer;
   color:white;
   background:linear-gradient(90deg,#16a34a,#22c55e);
-  margin-bottom:30px;
+  margin-bottom:25px;
   transition:all 0.3s ease;
-  box-shadow:0 8px 25px rgba(0,0,0,0.25);
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
 }
 #mindButton:hover{
   background:linear-gradient(90deg,#22c55e,#16a34a);
   transform:translateY(-3px);
 }
 .instruction{
-  font-size:18px;
+  font-size:16px;
   color:#065f46;
   line-height:1.8;
-  margin-bottom:30px;
+  margin-bottom:25px;
 }
 form label{
   display:flex;
@@ -71,16 +72,16 @@ form label{
   margin:8px 0 4px 0;
   font-weight:700;
   color:#047857;
-  font-size:18px;
+  font-size:16px;
 }
-form label img{width:26px;height:26px;}
+form label img{width:24px;height:24px;}
 input[type="text"], input[type="file"]{
   width:100%;
-  padding:18px 16px;
+  padding:16px 14px;
   margin:6px 0 16px 0;
   border-radius:12px;
   border:1px solid #a7f3d0;
-  font-size:18px;
+  font-size:16px;
   transition:all 0.3s;
 }
 input[type="text"]:focus,input[type="file"]:focus{
@@ -90,8 +91,8 @@ input[type="text"]:focus,input[type="file"]:focus{
 }
 button[type="submit"]{
   width:100%;
-  padding:20px;
-  font-size:20px;
+  padding:18px;
+  font-size:18px;
   font-weight:700;
   border:none;
   border-radius:15px;
@@ -100,7 +101,7 @@ button[type="submit"]{
   cursor:pointer;
   transition:all 0.3s ease;
   margin-top:15px;
-  box-shadow:0 8px 25px rgba(0,0,0,0.25);
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
 }
 button[type="submit"]:hover{
   background:linear-gradient(90deg,#34d399,#6ee7b7);
@@ -112,8 +113,8 @@ button[type="submit"]:active{transform:translateY(1px);}
   width:100%;
   background:#d1fae5;
   border-radius:15px;
-  margin-top:25px;
-  height:28px;
+  margin-top:20px;
+  height:26px;
   overflow:hidden;
   box-shadow:inset 0 3px 7px rgba(0,0,0,0.1);
 }
@@ -124,25 +125,25 @@ button[type="submit"]:active{transform:translateY(1px);}
   text-align:center;
   color:white;
   font-size:14px;
-  line-height:28px;
+  line-height:26px;
   transition:width 0.4s ease;
   border-radius:15px;
 }
 #status{
-  margin-top:20px;
+  margin-top:18px;
   text-align:center;
-  font-size:18px;
+  font-size:16px;
   color:#065f46;
   min-height:24px;
   opacity:0;
   transition:opacity 0.5s ease;
 }
 .preview-container{
-  margin-top:25px;
-  display:grid;
-  grid-template-columns:repeat(3, 1fr);
-  gap:20px;
-  justify-items:center;
+  margin-top:20px;
+  display:flex;
+  gap:15px;
+  justify-content:center;
+  flex-wrap:wrap;
   opacity:0;
   transform:translateY(20px);
   transition:opacity 0.6s ease, transform 0.6s ease;
@@ -153,22 +154,22 @@ button[type="submit"]:active{transform:translateY(1px);}
 }
 .preview-container img,
 .preview-container video{
-  width:220px;
-  height:220px;
+  width:120px;
+  height:120px;
   object-fit:cover;
   border-radius:12px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  box-shadow:0 8px 25px rgba(0,0,0,0.25);
   transition:transform 0.3s, box-shadow 0.3s, filter 0.3s, border 0.3s;
 }
 .preview-container img:hover,
 .preview-container video:hover{
   transform:scale(1.15);
-  box-shadow:0 14px 35px rgba(5,150,105,0.8);
+  box-shadow:0 12px 30px rgba(5,150,105,0.7);
   filter: drop-shadow(0 0 10px rgba(22,163,74,0.9));
   border:2px solid #16a34a;
 }
 .contact{
-  margin-top:30px;
+  margin-top:25px;
   text-align:center;
   opacity:0;
   transform:translateY(20px);
@@ -181,22 +182,22 @@ button[type="submit"]:active{transform:translateY(1px);}
   text-decoration:none;
   color:white;
   background:linear-gradient(135deg,#33a1dc,#1c8adb);
-  padding:16px 24px;
-  border-radius:20px;
+  padding:14px 20px;
+  border-radius:18px;
   font-weight:700;
-  font-size:20px;
+  font-size:18px;
   display:inline-flex;
   align-items:center;
-  gap:12px;
-  box-shadow:0 8px 30px rgba(51,161,220,0.6);
+  gap:10px;
+  box-shadow:0 6px 25px rgba(51,161,220,0.5);
   transition:all 0.4s ease, box-shadow 0.4s ease;
 }
 .tg-btn-blue:hover{
   transform:translateY(-5px) scale(1.05);
-  box-shadow:0 14px 40px rgba(51,161,220,0.8);
+  box-shadow:0 12px 35px rgba(51,161,220,0.7);
   background:linear-gradient(135deg,#1c8adb,#33a1dc);
 }
-.tg-btn-blue svg{width:24px;height:24px;fill:white;}
+.tg-btn-blue svg{width:22px;height:22px;fill:white;}
 </style>
 </head>
 <body>
@@ -209,20 +210,27 @@ button[type="submit"]:active{transform:translateY(1px);}
 <p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
 <p><strong>Шаг 4:</strong> Введите секретный код и загрузите фото, видео и .mind в форму.</p>
 </div>
+
 <form id="uploadForm" enctype="multipart/form-data">
 <label for="photo"><img src="https://img.icons8.com/ios-filled/50/000000/camera.png"/> Фото (JPEG):</label>
 <input type="file" name="photo" accept="image/jpeg" required>
+
 <label for="video"><img src="https://img.icons8.com/ios-filled/50/000000/video.png"/> Видео (MP4):</label>
 <input type="file" name="video" accept="video/mp4" required>
+
 <label for="mind"><img src="https://img.icons8.com/ios-filled/50/000000/puzzle.png"/> Файл .mind:</label>
 <input type="file" name="mind" accept=".mind" required>
+
 <label for="secretCode"><img src="https://img.icons8.com/ios-filled/50/000000/key.png"/> Секретный код:</label>
 <input type="text" name="secretCode" placeholder="Введите секретный код" required>
+
 <button type="submit">Загрузить</button>
 </form>
+
 <div class="preview-container" id="previewContainer"></div>
 <div id="progressBar"><div></div></div>
 <div id="status"></div>
+
 <div class="contact">
   <a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
