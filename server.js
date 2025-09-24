@@ -156,7 +156,7 @@ app.post(
       fs.writeFileSync(videoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Генерация HTML с видео и прозрачностью 30%
+      // Генерация HTML с видео и прозрачностью 65%
       const htmlContent = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -181,7 +181,7 @@ a-scene { width:100%; height:100%; }
 </a-assets>
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 <a-entity mindar-image-target="targetIndex: 0">
-<a-video id="videoPlane" src="#video1" material="opacity: 0.3"></a-video>
+<a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
 </a-entity>
 </a-scene>
 </div>
