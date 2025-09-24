@@ -6,9 +6,13 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 import { Octokit } from "@octokit/rest";
 import dotenv from "dotenv";
-import ffmpeg from "fluent-ffmpeg";   // ✅ добавлено
+import ffmpeg from "fluent-ffmpeg";
+import ffmpegPath from "ffmpeg-static"; // ffmpeg бинарь
 
 dotenv.config();
+
+// Указываем путь к ffmpeg (обязательно для сред без системного ffmpeg)
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,33 +20,40 @@ const PORT = process.env.PORT || 3000;
 const CLIENTS_DIR = path.join(process.cwd(), "clients");
 if (!fs.existsSync(CLIENTS_DIR)) fs.mkdirSync(CLIENTS_DIR);
 
-// Настройка multer
+// Настройка multer (memory storage)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// ✅ Кэширование статики (ускоряет загрузку сайта клиентом)
+// Кэширование статики (ускоряет загрузку у клиента)
 app.use(express.static("clients", { maxAge: "30d", immutable: true }));
 
-// Octokit для GitHub
+// Octokit для GitHub (требует GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO в env)
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 
-// Загружаем коды подписки
+// Загружаем коды подписки из codes.json (если есть)
 const codesPath = path.join(process.cwd(), "codes.json");
 let codes = {};
 if (fs.existsSync(codesPath)) {
-  codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
+  try {
+    codes = JSON.parse(fs.readFileSync(codesPath, "utf-8"));
+  } catch (e) {
+    console.error("Не удалось прочитать codes.json:", e);
+    codes = {};
+  }
 }
 
-// 🔥 Функция: сжатие + слияние видео с фото до ≤5 МБ
+// Функция: сжатие + слияние видео с фото до <= 5 МБ (итеративно уменьшаем битрейт)
 async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath) {
-  let targetBitrate = 1000; // стартовый битрейт (кбит/с)
+  let targetBitrate = 1000; // кбит/с, стартовый
 
   while (true) {
     await new Promise((resolve, reject) => {
+      // вход 0: rawVideoPath, вход 1: photoPath (будет масштабирована и использована как фон)
       ffmpeg(rawVideoPath)
-        .input(photoPath) // фото как подложка
+        .input(photoPath)
         .complexFilter([
-          "[1:v]scale=640:-1[vid];[0:v][vid]overlay=(W-w)/2:(H-h)/2"
+          // масштабируем фото под ширину 640 (сохраняем пропорции) и накладываем видео по центру
+          "[1:v]scale=640:-1[bg];[0:v]scale=640:-1[vid];[bg][vid]overlay=(W-w)/2:(H-h)/2"
         ])
         .outputOptions([
           "-c:v libx264",
@@ -50,32 +61,47 @@ async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPat
           "-tune film",
           "-movflags +faststart",
           `-b:v ${targetBitrate}k`,
-          "-maxrate " + targetBitrate + "k",
-          "-bufsize " + targetBitrate * 2 + "k",
+          `-maxrate ${targetBitrate}k`,
+          `-bufsize ${targetBitrate * 2}k`,
           "-c:a aac",
-          "-b:a 128k"
+          "-b:a 128k",
+          "-pix_fmt yuv420p"
         ])
-        .on("end", resolve)
-        .on("error", reject)
+        .on("end", () => {
+          resolve();
+        })
+        .on("error", (err) => {
+          reject(err);
+        })
         .save(compressedVideoPath);
     });
 
-    // проверка размера
+    // проверяем размер
     const stats = fs.statSync(compressedVideoPath);
     const sizeMB = stats.size / (1024 * 1024);
 
-    if (sizeMB <= 5) break; // ✅ если ≤5 МБ → готово
-    targetBitrate = Math.max(300, targetBitrate - 200); // уменьшаем битрейт
-    console.log(`⚠️ Видео ${sizeMB.toFixed(2)} МБ. Пробуем битрейт ${targetBitrate}k...`);
+    console.log(`Результат: ${sizeMB.toFixed(2)} MB при битрейте ${targetBitrate}k`);
+
+    if (sizeMB <= 5) {
+      break;
+    }
+
+    // уменьшаем битрейт и пробуем снова
+    if (targetBitrate <= 300) {
+      // уже минимальный предел — выходим с тем, что есть
+      console.warn("Достигнут минимальный битрейт, далее не уменьшаем.");
+      break;
+    }
+    targetBitrate = Math.max(300, targetBitrate - 200);
+    console.log(`Слишком большой размер, пробуем ${targetBitrate}k...`);
   }
 
-  console.log("✅ Видео успешно сжато и слито с фото:", compressedVideoPath);
+  console.log("Видео сжато и слито:", compressedVideoPath);
 }
 
-// Форма загрузки
+// Главная страница — форма загрузки (корпоративный стиль + инструкция)
 app.get("/", (req, res) => {
-  res.send(`
-<!DOCTYPE html>
+  res.send(`<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -91,24 +117,19 @@ button:hover { background-color:#1a252f; }
 .instruction p { margin:6px 0; }
 #progressBar { display:none; width:100%; background:#e0e0e0; border-radius:6px; margin-top:15px; height:20px; }
 #progressBar div { height:100%; width:0%; background:#2c3e50; text-align:center; color:white; line-height:20px; font-size:12px; transition: width 0.3s; }
-#status { margin-top:10px; text-align:center; font-size:14px; color:#34495e; }
+#status { margin-top:10px; text-align:center; font-size:14px; color:#34495e; word-break:break-word; }
 </style>
 </head>
 <body>
 <div class="upload-container">
 <h2>TamerlanMotion 1.0</h2>
-
-<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">
-Открыть генератор .mind
-</button>
-
+<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/', '_blank')">Открыть генератор .mind</button>
 <div class="instruction">
 <p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
 <p><strong>Шаг 2:</strong> Нажмите кнопку выше, чтобы открыть генератор .mind и создать маркер.</p>
 <p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
 <p><strong>Шаг 4:</strong> Введите секретный код и загрузите <code>.mind</code>, фото и видео в форму ниже.</p>
 </div>
-
 <form id="uploadForm" enctype="multipart/form-data">
 <input type="text" name="secretCode" placeholder="Введите секретный код" required>
 <input type="file" name="photo" accept="image/jpeg" required>
@@ -116,11 +137,9 @@ button:hover { background-color:#1a252f; }
 <input type="file" name="mind" accept=".mind" required>
 <button type="submit">Загрузить</button>
 </form>
-
 <div id="progressBar"><div></div></div>
 <div id="status"></div>
 </div>
-
 <script>
 const form = document.getElementById('uploadForm');
 const progressBar = document.getElementById('progressBar');
@@ -152,43 +171,49 @@ form.addEventListener('submit', (e) => {
     }
   };
 
+  xhr.onerror = () => {
+    status.innerHTML = '<p style="color:red;">Сетевая ошибка. Попробуйте ещё раз.</p>';
+  };
+
   xhr.send(files);
 });
 </script>
 </body>
-</html>
-  `);
+</html>`);
 });
 
-// Обработка загрузки файлов
+// Обработка загрузки файлов с проверкой секретного кода
 app.post(
   "/upload",
   upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "video", maxCount: 1 },
     { name: "mind", maxCount: 1 },
-    { name: "secretCode", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
-      const code = req.body.secretCode || (req.files.secretCode && req.files.secretCode[0].buffer.toString());
+      const code = req.body.secretCode;
 
       // Проверка кода
-      if(!code || !codes[code]) {
+      if (!code || !codes[code]) {
         return res.status(403).send("Неверный или просроченный секретный код");
       }
-
       const expiry = new Date(codes[code]);
-      if(expiry < new Date()) {
+      if (expiry < new Date()) {
         return res.status(403).send("Срок действия секретного кода истёк");
       }
 
+      // Создаём папку клиента
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
       fs.mkdirSync(clientFolder);
 
       const { photo, video, mind } = req.files;
+      if (!photo || !video || !mind) {
+        return res.status(400).send("Не все файлы загружены (photo, video, mind обязательны).");
+      }
 
+      // Сохраняем оригиналы (фото, "raw" видео, mind)
       const photoPath = path.join(clientFolder, photo[0].originalname);
       const rawVideoPath = path.join(clientFolder, "raw_" + video[0].originalname);
       const compressedVideoPath = path.join(clientFolder, video[0].originalname);
@@ -198,14 +223,15 @@ app.post(
       fs.writeFileSync(rawVideoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // ✅ Новый вызов
+      // Сжатие и слияние (может занять время; логируем)
+      console.log("Запускаем compressAndMergeVideo for", rawVideoPath);
       await compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath);
 
-      fs.unlinkSync(rawVideoPath); // удаляем оригинал после сжатия
+      // Удаляем сырое видео (чтобы не занимать место)
+      try { fs.unlinkSync(rawVideoPath); } catch(e) { /* ignore */ }
 
-      // Генерация HTML
-      const htmlContent = `
-<!DOCTYPE html>
+      // Генерация index.html для клиента (AR страница)
+      const htmlContent = `<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -215,7 +241,7 @@ app.post(
 <style>
 body { margin:0; background:black; height:100vh; width:100vw; overflow:hidden; }
 #container { position:fixed; top:0; left:0; width:100vw; height:100vh; display:flex; justify-content:center; align-items:center; background:black; }
-#startButton { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding:20px 40px; font-size:18px; background:#1e90ff; color:white; border:none; border-radius:8px; cursor:pointer; z-index:10; }
+#startButton { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); padding:18px 28px; font-size:16px; background:#1e90ff; color:white; border:none; border-radius:8px; cursor:pointer; z-index:10; }
 a-scene { width:100%; height:100%; }
 </style>
 </head>
@@ -228,7 +254,7 @@ a-scene { width:100%; height:100%; }
 </a-assets>
 <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 <a-entity mindar-image-target="targetIndex: 0">
-<a-video id="videoPlane" src="#video1"></a-video>
+<a-video id="videoPlane" src="#video1" width="1" height="0.5625"></a-video>
 </a-entity>
 </a-scene>
 </div>
@@ -238,30 +264,54 @@ const videoEl = document.getElementById('video1');
 const videoPlane = document.getElementById('videoPlane');
 const targetEntity = document.querySelector('[mindar-image-target]');
 let isPlaying = false;
+
 button.addEventListener('click', async () => {
-  try { videoEl.muted=true; await videoEl.play(); videoEl.pause(); videoEl.currentTime=0; button.style.display='none'; }
-  catch(err) { console.error(err); alert('Не удалось включить камеру'); }
+  try {
+    videoEl.muted = true;
+    await videoEl.play();
+    videoEl.pause();
+    videoEl.currentTime = 0;
+    button.style.display = 'none';
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось включить камеру');
+  }
 });
+
 videoEl.addEventListener('loadedmetadata', () => {
   const aspect = videoEl.videoWidth / videoEl.videoHeight;
-  const baseWidth = 1; const baseHeight = baseWidth / aspect;
+  const baseWidth = 1;
+  const baseHeight = baseWidth / aspect;
   videoPlane.setAttribute('width', baseWidth);
   videoPlane.setAttribute('height', baseHeight);
 });
-targetEntity.addEventListener('targetFound', () => { if(!isPlaying){ videoEl.muted=false; videoEl.currentTime=0; videoEl.play(); isPlaying=true; }});
-targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.currentTime=0; isPlaying=false; });
+
+targetEntity.addEventListener('targetFound', () => {
+  if (!isPlaying) {
+    videoEl.muted = false;
+    videoEl.currentTime = 0;
+    videoEl.play();
+    isPlaying = true;
+  }
+});
+
+targetEntity.addEventListener('targetLost', () => {
+  videoEl.pause();
+  videoEl.currentTime = 0;
+  isPlaying = false;
+});
 </script>
 </body>
-</html>
-`;
+</html>`;
+
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // QR-код
+      // Генерация QR-кода
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
-      // Вставка QR на фото
+      // Вставка QR в фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -269,30 +319,30 @@ targetEntity.addEventListener('targetLost', () => { videoEl.pause(); videoEl.cur
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Публикация в GitHub
+      // Публикация в GitHub (каждый файл в папке client{timestamp})
       const files = fs.readdirSync(clientFolder);
-      for(const file of files) {
+      for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
+
+        // createOrUpdateFileContents автоматически создаёт или обновляет файл
         await octokit.repos.createOrUpdateFileContents({
           owner: process.env.GITHUB_OWNER,
           repo: process.env.GITHUB_REPO,
           path: `clients/client${timestamp}/${file}`,
-          message: `Добавлены файлы для client${timestamp}`,
+          message: `Добавлены файлы для client${timestamp} (${file})`,
           content,
         });
       }
 
-      res.send(`
-<h3>Готово ✅</h3>
+      // Ответ фотографу
+      res.send(`<h3>Готово ✅</h3>
 <p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
 <p>QR-код встроен в фото (скачайте ниже):</p>
-<a href="/client${timestamp}/final_with_qr.jpg" download>
-<img src="/client${timestamp}/final_with_qr.jpg" width="400">
-</a>
-`);
-    } catch(err) {
-      console.error(err);
-      res.status(500).send("Ошибка при обработке ❌");
+<a href="/client${timestamp}/final_with_qr.jpg" download><img src="/client${timestamp}/final_with_qr.jpg" width="400"></a>`);
+    } catch (err) {
+      console.error("Ошибка /upload:", err);
+      // если это ошибка ffmpeg, вернём более детальное сообщение для отладки
+      res.status(500).send("Ошибка при обработке. Смотри логи сервера.");
     }
   }
 );
