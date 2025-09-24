@@ -1,0 +1,100 @@
+<!-- upload.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:linear-gradient(135deg,#f0f2f5,#d9e2ec);height:100vh;display:flex;justify-content:center;align-items:center;}
+.upload-container{background:#fff;padding:50px 40px;border-radius:20px;box-shadow:0 15px 40px rgba(0,0,0,0.12);width:450px;max-width:90%;transition:all 0.3s ease;}
+.upload-container:hover{transform:translateY(-3px);}
+h2{text-align:center;color:#1f2937;margin-bottom:30px;font-weight:700;font-size:26px;}
+#mindButton{display:block;width:100%;padding:16px;font-size:16px;font-weight:600;border:none;border-radius:10px;cursor:pointer;color:white;background:linear-gradient(90deg,#4f46e5,#6366f1);margin-bottom:25px;transition:all 0.3s ease;}
+#mindButton:hover{background:linear-gradient(90deg,#6366f1,#818cf8);transform:translateY(-2px);}
+.instruction{font-size:15px;color:#4b5563;line-height:1.6;margin-bottom:25px;}
+.instruction p{margin:8px 0;}
+input[type="text"],input[type="file"]{width:100%;padding:14px 12px;margin:10px 0;border-radius:10px;border:1px solid #d1d5db;font-size:15px;transition:all 0.3s;}
+input[type="text"]:focus,input[type="file"]:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,0.2);}
+button[type="submit"]{width:100%;padding:16px;font-size:16px;font-weight:600;border:none;border-radius:10px;background:linear-gradient(90deg,#10b981,#34d399);color:white;cursor:pointer;transition:all 0.3s ease;margin-top:12px;}
+button[type="submit"]:hover{background:linear-gradient(90deg,#34d399,#6ee7b7);transform:translateY(-2px);}
+button[type="submit"]:active{transform:translateY(1px);}
+#progressBar{display:none;width:100%;background:#e5e7eb;border-radius:10px;margin-top:20px;height:22px;overflow:hidden;}
+#progressBar div{height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#818cf8);text-align:center;color:white;font-size:13px;line-height:22px;transition:width 0.3s;border-radius:10px;}
+#status{margin-top:15px;text-align:center;font-size:14px;color:#374151;min-height:22px;opacity:0;transition:opacity 0.5s ease;}
+.preview-container{margin-top:15px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.preview-container img,.preview-container video{width:100px;height:100px;object-fit:cover;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,0.1);transition:transform 0.3s;}
+.preview-container img:hover,.preview-container video:hover{transform:scale(1.05);}
+</style>
+</head>
+<body>
+<div class="upload-container">
+<h2>TamerlanMotion 1.0</h2>
+<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/','_blank')">Открыть генератор .mind</button>
+<div class="instruction">
+<p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
+<p><strong>Шаг 2:</strong> Создайте .mind файл через генератор.</p>
+<p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
+<p><strong>Шаг 4:</strong> Введите секретный код и загрузите фото, видео и .mind в форму.</p>
+</div>
+<form id="uploadForm" enctype="multipart/form-data">
+<input type="text" name="secretCode" placeholder="Введите секретный код" required>
+<input type="file" name="photo" accept="image/jpeg" required>
+<input type="file" name="video" accept="video/mp4" required>
+<input type="file" name="mind" accept=".mind" required>
+<button type="submit">Загрузить</button>
+</form>
+<div class="preview-container" id="previewContainer"></div>
+<div id="progressBar"><div></div></div>
+<div id="status"></div>
+</div>
+<script>
+const form=document.getElementById('uploadForm');
+const progressBar=document.getElementById('progressBar');
+const progress=progressBar.firstElementChild;
+const status=document.getElementById('status');
+const previewContainer=document.getElementById('previewContainer');
+const fileInputs=form.querySelectorAll('input[type="file"]');
+fileInputs.forEach(input=>{
+input.addEventListener('change',()=>{
+previewContainer.innerHTML='';
+fileInputs.forEach(fInput=>{
+if(fInput.files[0]){
+if(fInput.files[0].type.startsWith('image/')){
+const img=document.createElement('img');
+img.src=URL.createObjectURL(fInput.files[0]);
+previewContainer.appendChild(img);
+}else if(fInput.files[0].type.startsWith('video/')){
+const vid=document.createElement('video');
+vid.src=URL.createObjectURL(fInput.files[0]);
+vid.controls=true;
+previewContainer.appendChild(vid);
+}}});});});
+form.addEventListener('submit',e=>{
+e.preventDefault();
+const files=new FormData(form);
+const xhr=new XMLHttpRequest();
+xhr.open('POST','/upload',true);
+xhr.upload.onprogress=event=>{
+if(event.lengthComputable){
+const percent=Math.round((event.loaded/event.total)*100);
+progress.style.width=percent+'%';
+progress.textContent=percent+'%';
+progressBar.style.display='block';
+}};
+xhr.onload=()=>{
+if(xhr.status===200){
+status.innerHTML=xhr.responseText;
+status.style.opacity=1;
+progress.style.width='100%';
+progress.textContent='Готово!';
+}else{
+status.innerHTML='<p style="color:red;">'+xhr.responseText+'</p>';
+status.style.opacity=1;
+}};
+xhr.send(files);
+});
+</script>
+</body>
+</html>
