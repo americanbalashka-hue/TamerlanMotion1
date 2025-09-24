@@ -14,6 +14,15 @@ dotenv.config();
 // Указываем путь к ffmpeg (обязательно для сред без системного ffmpeg)
 ffmpeg.setFfmpegPath(ffmpegPath);
 
+// Проверка доступности ffmpeg
+ffmpeg.getAvailableFormats((err, formats) => {
+  if (err) {
+    console.error("FFmpeg не доступен:", err);
+  } else {
+    console.log("FFmpeg готов. Доступные форматы:", Object.keys(formats).join(", "));
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -42,17 +51,15 @@ if (fs.existsSync(codesPath)) {
   }
 }
 
-// Функция: сжатие + слияние видео с фото до <= 5 МБ (итеративно уменьшаем битрейт)
+// Функция: сжатие + слияние видео с фото до <= 5 МБ
 async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath) {
   let targetBitrate = 1000; // кбит/с, стартовый
 
   while (true) {
     await new Promise((resolve, reject) => {
-      // вход 0: rawVideoPath, вход 1: photoPath (будет масштабирована и использована как фон)
       ffmpeg(rawVideoPath)
         .input(photoPath)
         .complexFilter([
-          // масштабируем фото под ширину 640 (сохраняем пропорции) и накладываем видео по центру
           "[1:v]scale=640:-1[bg];[0:v]scale=640:-1[vid];[bg][vid]overlay=(W-w)/2:(H-h)/2"
         ])
         .outputOptions([
@@ -67,28 +74,18 @@ async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPat
           "-b:a 128k",
           "-pix_fmt yuv420p"
         ])
-        .on("end", () => {
-          resolve();
-        })
-        .on("error", (err) => {
-          reject(err);
-        })
+        .on("end", () => resolve())
+        .on("error", (err) => reject(err))
         .save(compressedVideoPath);
     });
 
-    // проверяем размер
     const stats = fs.statSync(compressedVideoPath);
     const sizeMB = stats.size / (1024 * 1024);
-
     console.log(`Результат: ${sizeMB.toFixed(2)} MB при битрейте ${targetBitrate}k`);
 
-    if (sizeMB <= 5) {
-      break;
-    }
+    if (sizeMB <= 5) break;
 
-    // уменьшаем битрейт и пробуем снова
     if (targetBitrate <= 300) {
-      // уже минимальный предел — выходим с тем, что есть
       console.warn("Достигнут минимальный битрейт, далее не уменьшаем.");
       break;
     }
@@ -99,7 +96,7 @@ async function compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPat
   console.log("Видео сжато и слито:", compressedVideoPath);
 }
 
-// Главная страница — форма загрузки (корпоративный стиль + инструкция)
+// Главная страница — форма загрузки
 app.get("/", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="ru">
@@ -182,7 +179,7 @@ form.addEventListener('submit', (e) => {
 </html>`);
 });
 
-// Обработка загрузки файлов с проверкой секретного кода
+// Обработка загрузки файлов
 app.post(
   "/upload",
   upload.fields([
@@ -194,26 +191,17 @@ app.post(
     try {
       const code = req.body.secretCode;
 
-      // Проверка кода
-      if (!code || !codes[code]) {
-        return res.status(403).send("Неверный или просроченный секретный код");
-      }
+      if (!code || !codes[code]) return res.status(403).send("Неверный или просроченный секретный код");
       const expiry = new Date(codes[code]);
-      if (expiry < new Date()) {
-        return res.status(403).send("Срок действия секретного кода истёк");
-      }
+      if (expiry < new Date()) return res.status(403).send("Срок действия секретного кода истёк");
 
-      // Создаём папку клиента
       const timestamp = Date.now();
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
       fs.mkdirSync(clientFolder);
 
       const { photo, video, mind } = req.files;
-      if (!photo || !video || !mind) {
-        return res.status(400).send("Не все файлы загружены (photo, video, mind обязательны).");
-      }
+      if (!photo || !video || !mind) return res.status(400).send("Не все файлы загружены (photo, video, mind обязательны).");
 
-      // Сохраняем оригиналы (фото, "raw" видео, mind)
       const photoPath = path.join(clientFolder, photo[0].originalname);
       const rawVideoPath = path.join(clientFolder, "raw_" + video[0].originalname);
       const compressedVideoPath = path.join(clientFolder, video[0].originalname);
@@ -223,14 +211,11 @@ app.post(
       fs.writeFileSync(rawVideoPath, video[0].buffer);
       fs.writeFileSync(mindPath, mind[0].buffer);
 
-      // Сжатие и слияние (может занять время; логируем)
       console.log("Запускаем compressAndMergeVideo for", rawVideoPath);
       await compressAndMergeVideo(photoPath, rawVideoPath, compressedVideoPath);
 
-      // Удаляем сырое видео (чтобы не занимать место)
-      try { fs.unlinkSync(rawVideoPath); } catch(e) { /* ignore */ }
+      try { fs.unlinkSync(rawVideoPath); } catch(e) { }
 
-      // Генерация index.html для клиента (AR страница)
       const htmlContent = `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -306,12 +291,10 @@ targetEntity.addEventListener('targetLost', () => {
 
       fs.writeFileSync(path.join(clientFolder, "index.html"), htmlContent);
 
-      // Генерация QR-кода
       const clientUrl = `${req.protocol}://${req.get("host")}/client${timestamp}/index.html`;
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
-      // Вставка QR в фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -319,12 +302,9 @@ targetEntity.addEventListener('targetLost', () => {
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Публикация в GitHub (каждый файл в папке client{timestamp})
       const files = fs.readdirSync(clientFolder);
       for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), { encoding: "base64" });
-
-        // createOrUpdateFileContents автоматически создаёт или обновляет файл
         await octokit.repos.createOrUpdateFileContents({
           owner: process.env.GITHUB_OWNER,
           repo: process.env.GITHUB_REPO,
@@ -334,14 +314,12 @@ targetEntity.addEventListener('targetLost', () => {
         });
       }
 
-      // Ответ фотографу
       res.send(`<h3>Готово ✅</h3>
 <p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
 <p>QR-код встроен в фото (скачайте ниже):</p>
 <a href="/client${timestamp}/final_with_qr.jpg" download><img src="/client${timestamp}/final_with_qr.jpg" width="400"></a>`);
     } catch (err) {
       console.error("Ошибка /upload:", err);
-      // если это ошибка ffmpeg, вернём более детальное сообщение для отладки
       res.status(500).send("Ошибка при обработке. Смотри логи сервера.");
     }
   }
