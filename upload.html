@@ -1,3 +1,5 @@
+Вот полностью готовая версия, которую можно просто скопировать. Она фиксированная по ширине, как ПК, но на телефоне можно масштабировать пальцами:
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -15,23 +17,20 @@ body{
   justify-content:center;
   align-items:center;
   padding:20px;
-  overflow-x:auto;
 }
 .upload-container{
   background:#fff;
-  padding:50px 50px;
+  padding:60px 40px 50px 40px;
   border-radius:25px;
   box-shadow:0 25px 70px rgba(0,0,0,0.25);
   width:700px;
-  min-width:700px; /* фиксированная ширина для ПК */
+  max-width:700px; /* фиксированная ширина для ПК */
   transition:all 0.4s ease;
   opacity:0;
   transform:translateY(40px);
   animation:fadeInUp 0.8s forwards;
 }
-@keyframes fadeInUp{
-  to{opacity:1; transform:translateY(0);}
-}
+@keyframes fadeInUp{to{opacity:1; transform:translateY(0);}}
 h2{
   text-align:center;
   color:#166534;
@@ -175,9 +174,7 @@ button[type="submit"]:active{transform:translateY(1px);}
   transform:translateY(20px);
   animation:fadeInUpContact 1s forwards 1s;
 }
-@keyframes fadeInUpContact{
-  to{opacity:1; transform:translateY(0);}
-}
+@keyframes fadeInUpContact{to{opacity:1; transform:translateY(0);}}
 .tg-btn-blue{
   text-decoration:none;
   color:white;
@@ -299,3 +296,12 @@ form.addEventListener('submit',e=>{
 </script>
 </body>
 </html>
+
+✅ Особенности этой версии:
+	•	Фиксированная ширина 700px, как на ПК.
+	•	На телефоне можно увеличивать страницу пальцами.
+	•	Вся стилистика и кнопки ПК-версии.
+
+Если хочешь, я могу сделать ещё так, чтобы кнопки и текст автоматически оставались вертикально удобными на телефоне, но всё равно в стиле ПК.
+
+Хочешь, чтобы я это сделал?
