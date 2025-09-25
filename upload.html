@@ -1,84 +1,94 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TamerlanMotion 1.0 - Загрузка AR-файлов</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TamerlanMotion 1.0 - AR File Upload</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   font-family:'Inter',sans-serif;
   background:linear-gradient(135deg,#a8e6cf,#dcedc1);
-  min-height:100vh;
+  height:100vh;
   display:flex;
   justify-content:center;
   align-items:center;
-  padding:20px;
+  overflow-x:hidden;
+  padding:10px;
 }
 .upload-container{
   background:#fff;
-  padding:60px 40px 50px 40px;
-  border-radius:25px;
-  box-shadow:0 25px 70px rgba(0,0,0,0.25);
-  width:700px;
-  max-width:700px; /* фиксированная ширина для ПК */
+  padding:25px 20px 20px 20px;
+  border-radius:18px;
+  box-shadow:0 15px 50px rgba(0,0,0,0.2);
+  width:100%;
+  max-width:420px;
   transition:all 0.4s ease;
+  position:relative;
   opacity:0;
-  transform:translateY(40px);
+  transform:translateY(20px);
   animation:fadeInUp 0.8s forwards;
 }
-@keyframes fadeInUp{to{opacity:1; transform:translateY(0);}}
+@keyframes fadeInUp{
+  to{opacity:1; transform:translateY(0);}
+}
+.upload-container:hover{transform:translateY(-2px);}
 h2{
   text-align:center;
   color:#166534;
-  margin-bottom:35px;
-  font-weight:900;
-  font-size:36px;
-  letter-spacing:1.5px;
+  margin-bottom:15px;
+  font-weight:800;
+  font-size:22px;
+  letter-spacing:1px;
 }
 #mindButton{
   display:block;
   width:100%;
-  padding:18px;
-  font-size:18px;
+  padding:14px;
+  font-size:15px;
   font-weight:700;
   border:none;
-  border-radius:15px;
+  border-radius:12px;
   cursor:pointer;
   color:white;
   background:linear-gradient(90deg,#16a34a,#22c55e);
-  margin-bottom:25px;
+  margin-bottom:15px;
   transition:all 0.3s ease;
-  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
 }
 #mindButton:hover{
   background:linear-gradient(90deg,#22c55e,#16a34a);
-  transform:translateY(-3px);
+  transform:translateY(-1px);
 }
 .instruction{
-  font-size:16px;
+  font-size:14px;
   color:#065f46;
-  line-height:1.8;
-  margin-bottom:25px;
+  line-height:1.5;
+  margin-bottom:15px;
 }
+.instruction p{margin:6px 0;}
+
+/* Labels with icons */
 form label{
   display:flex;
   align-items:center;
-  gap:10px;
-  margin:8px 0 4px 0;
-  font-weight:700;
+  gap:6px;
+  margin:4px 0 2px 0;
+  font-weight:600;
   color:#047857;
-  font-size:16px;
+  font-size:14px;
 }
-form label img{width:24px;height:24px;}
+form label img{width:18px;height:18px;}
+
+/* Input fields */
 input[type="text"], input[type="file"]{
   width:100%;
-  padding:16px 14px;
-  margin:6px 0 16px 0;
-  border-radius:12px;
+  padding:12px 10px;
+  margin:4px 0 10px 0;
+  border-radius:10px;
   border:1px solid #a7f3d0;
-  font-size:16px;
+  font-size:14px;
   transition:all 0.3s;
 }
 input[type="text"]:focus,input[type="file"]:focus{
@@ -88,32 +98,32 @@ input[type="text"]:focus,input[type="file"]:focus{
 }
 button[type="submit"]{
   width:100%;
-  padding:18px;
-  font-size:18px;
+  padding:14px;
+  font-size:15px;
   font-weight:700;
   border:none;
-  border-radius:15px;
+  border-radius:12px;
   background:linear-gradient(90deg,#10b981,#34d399);
   color:white;
   cursor:pointer;
   transition:all 0.3s ease;
-  margin-top:15px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+  margin-top:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
 }
 button[type="submit"]:hover{
   background:linear-gradient(90deg,#34d399,#6ee7b7);
-  transform:translateY(-3px);
+  transform:translateY(-1px);
 }
 button[type="submit"]:active{transform:translateY(1px);}
 #progressBar{
   display:none;
   width:100%;
   background:#d1fae5;
-  border-radius:15px;
-  margin-top:20px;
-  height:26px;
+  border-radius:12px;
+  margin-top:15px;
+  height:20px;
   overflow:hidden;
-  box-shadow:inset 0 3px 7px rgba(0,0,0,0.1);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);
 }
 #progressBar div{
   height:100%;
@@ -121,28 +131,28 @@ button[type="submit"]:active{transform:translateY(1px);}
   background:linear-gradient(90deg,#16a34a,#22c55e);
   text-align:center;
   color:white;
-  font-size:14px;
-  line-height:26px;
+  font-size:12px;
+  line-height:20px;
   transition:width 0.4s ease;
-  border-radius:15px;
+  border-radius:12px;
 }
 #status{
-  margin-top:18px;
+  margin-top:12px;
   text-align:center;
-  font-size:16px;
+  font-size:13px;
   color:#065f46;
-  min-height:24px;
+  min-height:20px;
   opacity:0;
   transition:opacity 0.5s ease;
 }
 .preview-container{
-  margin-top:20px;
+  margin-top:12px;
   display:flex;
-  gap:15px;
+  gap:8px;
   justify-content:center;
   flex-wrap:wrap;
   opacity:0;
-  transform:translateY(20px);
+  transform:translateY(15px);
   transition:opacity 0.6s ease, transform 0.6s ease;
 }
 .preview-container.show{
@@ -151,88 +161,89 @@ button[type="submit"]:active{transform:translateY(1px);}
 }
 .preview-container img,
 .preview-container video{
-  width:120px;
-  height:120px;
+  width:80px;
+  height:80px;
   object-fit:cover;
-  border-radius:12px;
-  box-shadow:0 8px 25px rgba(0,0,0,0.25);
+  border-radius:10px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.2);
   transition:transform 0.3s, box-shadow 0.3s, filter 0.3s, border 0.3s;
 }
 .preview-container img:hover,
 .preview-container video:hover{
-  transform:scale(1.15);
-  box-shadow:0 12px 30px rgba(5,150,105,0.7);
-  filter: drop-shadow(0 0 10px rgba(22,163,74,0.9));
+  transform:scale(1.1);
+  box-shadow:0 8px 20px rgba(5,150,105,0.6);
+  filter: drop-shadow(0 0 6px rgba(22,163,74,0.8));
   border:2px solid #16a34a;
 }
+
+/* Telegram button */
 .contact{
-  margin-top:25px;
+  margin-top:15px;
   text-align:center;
   opacity:0;
-  transform:translateY(20px);
-  animation:fadeInUpContact 1s forwards 1s;
+  transform:translateY(15px);
+  animation:fadeInUpContact 1s forwards 0.8s;
 }
-@keyframes fadeInUpContact{to{opacity:1; transform:translateY(0);}}
+@keyframes fadeInUpContact{
+  to{opacity:1; transform:translateY(0);}
+}
 .tg-btn-blue{
   text-decoration:none;
   color:white;
   background:linear-gradient(135deg,#33a1dc,#1c8adb);
-  padding:14px 20px;
-  border-radius:18px;
+  padding:10px 14px;
+  border-radius:12px;
   font-weight:700;
-  font-size:18px;
+  font-size:14px;
   display:inline-flex;
   align-items:center;
-  gap:10px;
-  box-shadow:0 6px 25px rgba(51,161,220,0.5);
-  transition:all 0.4s ease, box-shadow 0.4s ease;
+  gap:6px;
+  box-shadow:0 4px 15px rgba(51,161,220,0.4);
+  transition:all 0.3s ease, box-shadow 0.3s ease;
 }
 .tg-btn-blue:hover{
-  transform:translateY(-5px) scale(1.05);
-  box-shadow:0 12px 35px rgba(51,161,220,0.7);
+  transform:translateY(-3px) scale(1.05);
+  box-shadow:0 8px 20px rgba(51,161,220,0.6);
   background:linear-gradient(135deg,#1c8adb,#33a1dc);
 }
-.tg-btn-blue svg{width:22px;height:22px;fill:white;}
+.tg-btn-blue svg{
+  width:18px;
+  height:18px;
+  fill:white;
+}
 </style>
 </head>
 <body>
 <div class="upload-container">
 <h2>TamerlanMotion 1.0</h2>
-<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/','_blank')">Открыть генератор .mind</button>
+<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/','_blank')">Open .mind Generator</button>
 <div class="instruction">
-<p><strong>Шаг 1:</strong> Получите секретный код для загрузки.</p>
-<p><strong>Шаг 2:</strong> Создайте .mind файл через генератор.</p>
-<p><strong>Шаг 3:</strong> Скачайте файл <code>.mind</code>.</p>
-<p><strong>Шаг 4:</strong> Введите секретный код и загрузите фото, видео и .mind в форму.</p>
+<p><strong>Step 1:</strong> Get your secret code for upload.</p>
+<p><strong>Step 2:</strong> Create a .mind file using the generator.</p>
+<p><strong>Step 3:</strong> Download the <code>.mind</code> file.</p>
+<p><strong>Step 4:</strong> Enter the secret code and upload your photo, video, and .mind file.</p>
 </div>
-
 <form id="uploadForm" enctype="multipart/form-data">
-<label for="photo"><img src="https://img.icons8.com/ios-filled/50/000000/camera.png"/> Фото (JPEG):</label>
+<label for="photo"><img src="https://img.icons8.com/ios-filled/50/000000/camera.png"/> Photo (JPEG):</label>
 <input type="file" name="photo" accept="image/jpeg" required>
-
-<label for="video"><img src="https://img.icons8.com/ios-filled/50/000000/video.png"/> Видео (MP4):</label>
+<label for="video"><img src="https://img.icons8.com/ios-filled/50/000000/video.png"/> Video (MP4):</label>
 <input type="file" name="video" accept="video/mp4" required>
-
-<label for="mind"><img src="https://img.icons8.com/ios-filled/50/000000/puzzle.png"/> Файл .mind:</label>
+<label for="mind"><img src="https://img.icons8.com/ios-filled/50/000000/puzzle.png"/> .mind File:</label>
 <input type="file" name="mind" accept=".mind" required>
-
-<label for="secretCode"><img src="https://img.icons8.com/ios-filled/50/000000/key.png"/> Секретный код:</label>
-<input type="text" name="secretCode" placeholder="Введите секретный код" required>
-
-<button type="submit">Загрузить</button>
+<label for="secretCode"><img src="https://img.icons8.com/ios-filled/50/000000/key.png"/> Secret Code:</label>
+<input type="text" name="secretCode" placeholder="Enter secret code" required>
+<button type="submit">Upload</button>
 </form>
-
 <div class="preview-container" id="previewContainer"></div>
 <div id="progressBar"><div></div></div>
 <div id="status"></div>
-
 <div class="contact">
-  <a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
-      <path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.7 81.6l-20.3 95.8c-1.5 6.9-5.5 8.6-11.1 5.3l-30.7-22.7-14.8 14.3c-1.6 1.6-2.9 2.9-5.4 2.9l2-28.6 52-47.1c2.3-2 0.4-3.1-3.2-1.1l-64.3 40.5-27.7-8.6c-6-1.9-6.1-6-1.3-8.9l107.5-41.5c5-1.9 9.3 1.1 7.7 8.2z"/>
-    </svg>
-    Написать создателю
-  </a>
+<a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+<path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.7 81.6l-20.3 95.8c-1.5 6.9-5.5 8.6-11.1 5.3l-30.7-22.7-14.8 14.3c-1.6 1.6-2.9 2.9-5.4 2.9l2-28.6 52-47.1c2.3-2 0.4-3.1-3.2-1.1l-64.3 40.5-27.7-8.6c-6-1.9-6.1-6-1.3-8.9l107.5-41.5c5-1.9 9.3 1.1 7.7 8.2z"/>
+</svg>
+Contact Creator
+</a>
 </div>
 </div>
 
@@ -283,7 +294,7 @@ form.addEventListener('submit',e=>{
       status.innerHTML=xhr.responseText;
       status.style.opacity=1;
       progress.style.width='100%';
-      progress.textContent='Готово!';
+      progress.textContent='Done!';
     } else {
       status.innerHTML='<p style="color:red;">'+xhr.responseText+'</p>';
       status.style.opacity=1;
