@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TamerlanMotion 1.0 - AR File Upload</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Avenuhub - AR File Upload</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   font-family:'Inter',sans-serif;
-  background:linear-gradient(135deg,#a8e6cf,#dcedc1);
+  background:#000;
+  color:#fff;
   height:100vh;
   display:flex;
   justify-content:center;
@@ -18,12 +19,12 @@ body{
   padding:10px;
 }
 .upload-container{
-  background:#fff;
+  background:#111;
   padding:25px 20px 20px 20px;
-  border-radius:18px;
-  box-shadow:0 15px 50px rgba(0,0,0,0.2);
+  border-radius:10px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.8);
   width:100%;
-  max-width:420px;
+  max-width:460px;
   transition:all 0.4s ease;
   position:relative;
   opacity:0;
@@ -34,13 +35,21 @@ body{
   to{opacity:1; transform:translateY(0);}
 }
 .upload-container:hover{transform:translateY(-2px);}
-h2{
-  text-align:center;
-  color:#166534;
-  margin-bottom:15px;
+.logo{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:28px;
   font-weight:800;
-  font-size:22px;
-  letter-spacing:1px;
+  margin-bottom:18px;
+}
+.logo span:first-child{color:#fff;}
+.logo span:last-child{
+  background:#ffa31a;
+  color:#000;
+  padding:2px 6px;
+  border-radius:4px;
+  margin-left:5px;
 }
 #mindButton{
   display:block;
@@ -49,52 +58,46 @@ h2{
   font-size:15px;
   font-weight:700;
   border:none;
-  border-radius:12px;
+  border-radius:8px;
   cursor:pointer;
-  color:white;
-  background:linear-gradient(90deg,#16a34a,#22c55e);
+  color:#000;
+  background:#ffa31a;
   margin-bottom:15px;
   transition:all 0.3s ease;
-  box-shadow:0 4px 12px rgba(0,0,0,0.2);
 }
-#mindButton:hover{
-  background:linear-gradient(90deg,#22c55e,#16a34a);
-  transform:translateY(-1px);
-}
+#mindButton:hover{background:#ffb642;}
 .instruction{
   font-size:14px;
-  color:#065f46;
+  color:#ddd;
   line-height:1.5;
   margin-bottom:15px;
 }
 .instruction p{margin:6px 0;}
-
-/* Labels with icons */
 form label{
   display:flex;
   align-items:center;
   gap:6px;
   margin:4px 0 2px 0;
   font-weight:600;
-  color:#047857;
+  color:#ffa31a;
   font-size:14px;
 }
 form label img{width:18px;height:18px;}
-
-/* Input fields */
 input[type="text"], input[type="file"]{
   width:100%;
   padding:12px 10px;
   margin:4px 0 10px 0;
-  border-radius:10px;
-  border:1px solid #a7f3d0;
+  border-radius:6px;
+  border:1px solid #333;
+  background:#000;
+  color:#fff;
   font-size:14px;
   transition:all 0.3s;
 }
 input[type="text"]:focus,input[type="file"]:focus{
   outline:none;
-  border-color:#16a34a;
-  box-shadow:0 0 0 3px rgba(22,163,74,0.2);
+  border-color:#ffa31a;
+  box-shadow:0 0 0 2px rgba(255,163,26,0.4);
 }
 button[type="submit"]{
   width:100%;
@@ -102,45 +105,39 @@ button[type="submit"]{
   font-size:15px;
   font-weight:700;
   border:none;
-  border-radius:12px;
-  background:linear-gradient(90deg,#10b981,#34d399);
-  color:white;
+  border-radius:8px;
+  background:#ffa31a;
+  color:#000;
   cursor:pointer;
   transition:all 0.3s ease;
   margin-top:10px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.2);
 }
-button[type="submit"]:hover{
-  background:linear-gradient(90deg,#34d399,#6ee7b7);
-  transform:translateY(-1px);
-}
-button[type="submit"]:active{transform:translateY(1px);}
+button[type="submit"]:hover{background:#ffb642;}
 #progressBar{
   display:none;
   width:100%;
-  background:#d1fae5;
-  border-radius:12px;
+  background:#222;
+  border-radius:6px;
   margin-top:15px;
-  height:20px;
+  height:18px;
   overflow:hidden;
-  box-shadow:inset 0 2px 4px rgba(0,0,0,0.1);
 }
 #progressBar div{
   height:100%;
   width:0%;
-  background:linear-gradient(90deg,#16a34a,#22c55e);
+  background:#ffa31a;
   text-align:center;
-  color:white;
+  color:#000;
   font-size:12px;
-  line-height:20px;
+  line-height:18px;
   transition:width 0.4s ease;
-  border-radius:12px;
+  border-radius:6px;
 }
 #status{
   margin-top:12px;
   text-align:center;
   font-size:13px;
-  color:#065f46;
+  color:#ffa31a;
   min-height:20px;
   opacity:0;
   transition:opacity 0.5s ease;
@@ -164,87 +161,69 @@ button[type="submit"]:active{transform:translateY(1px);}
   width:80px;
   height:80px;
   object-fit:cover;
-  border-radius:10px;
-  box-shadow:0 4px 12px rgba(0,0,0,0.2);
+  border-radius:6px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.6);
   transition:transform 0.3s, box-shadow 0.3s, filter 0.3s, border 0.3s;
 }
 .preview-container img:hover,
 .preview-container video:hover{
   transform:scale(1.1);
-  box-shadow:0 8px 20px rgba(5,150,105,0.6);
-  filter: drop-shadow(0 0 6px rgba(22,163,74,0.8));
-  border:2px solid #16a34a;
+  box-shadow:0 8px 20px rgba(255,163,26,0.6);
+  border:2px solid #ffa31a;
 }
-
-/* Telegram button */
 .contact{
   margin-top:15px;
   text-align:center;
-  opacity:0;
-  transform:translateY(15px);
-  animation:fadeInUpContact 1s forwards 0.8s;
-}
-@keyframes fadeInUpContact{
-  to{opacity:1; transform:translateY(0);}
 }
 .tg-btn-blue{
   text-decoration:none;
-  color:white;
-  background:linear-gradient(135deg,#33a1dc,#1c8adb);
+  color:#fff;
+  background:#ffa31a;
   padding:10px 14px;
-  border-radius:12px;
+  border-radius:8px;
   font-weight:700;
   font-size:14px;
   display:inline-flex;
   align-items:center;
   gap:6px;
-  box-shadow:0 4px 15px rgba(51,161,220,0.4);
-  transition:all 0.3s ease, box-shadow 0.3s ease;
+  transition:all 0.3s ease;
 }
-.tg-btn-blue:hover{
-  transform:translateY(-3px) scale(1.05);
-  box-shadow:0 8px 20px rgba(51,161,220,0.6);
-  background:linear-gradient(135deg,#1c8adb,#33a1dc);
-}
-.tg-btn-blue svg{
-  width:18px;
-  height:18px;
-  fill:white;
-}
+.tg-btn-blue:hover{background:#ffb642;}
+.tg-btn-blue svg{width:18px;height:18px;fill:#000;}
 </style>
 </head>
 <body>
 <div class="upload-container">
-<h2>TamerlanMotion 1.0</h2>
-<button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/','_blank')">Open .mind Generator</button>
-<div class="instruction">
-<p><strong>Step 1:</strong> Get your secret code for upload.</p>
-<p><strong>Step 2:</strong> Create a .mind file using the generator.</p>
-<p><strong>Step 3:</strong> Download the <code>.mind</code> file.</p>
-<p><strong>Step 4:</strong> Enter the secret code and upload your photo, video, and .mind file.</p>
-</div>
-<form id="uploadForm" enctype="multipart/form-data">
-<label for="photo"><img src="https://img.icons8.com/ios-filled/50/000000/camera.png"/> Photo (JPEG):</label>
-<input type="file" name="photo" accept="image/jpeg" required>
-<label for="video"><img src="https://img.icons8.com/ios-filled/50/000000/video.png"/> Video (MP4):</label>
-<input type="file" name="video" accept="video/mp4" required>
-<label for="mind"><img src="https://img.icons8.com/ios-filled/50/000000/puzzle.png"/> .mind File:</label>
-<input type="file" name="mind" accept=".mind" required>
-<label for="secretCode"><img src="https://img.icons8.com/ios-filled/50/000000/key.png"/> Secret Code:</label>
-<input type="text" name="secretCode" placeholder="Enter secret code" required>
-<button type="submit">Upload</button>
-</form>
-<div class="preview-container" id="previewContainer"></div>
-<div id="progressBar"><div></div></div>
-<div id="status"></div>
-<div class="contact">
-<a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
-<path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.7 81.6l-20.3 95.8c-1.5 6.9-5.5 8.6-11.1 5.3l-30.7-22.7-14.8 14.3c-1.6 1.6-2.9 2.9-5.4 2.9l2-28.6 52-47.1c2.3-2 0.4-3.1-3.2-1.1l-64.3 40.5-27.7-8.6c-6-1.9-6.1-6-1.3-8.9l107.5-41.5c5-1.9 9.3 1.1 7.7 8.2z"/>
-</svg>
-Contact Creator
-</a>
-</div>
+  <div class="logo"><span>Avenu</span><span>hub</span></div>
+  <button id="mindButton" onclick="window.open('https://hiukim.github.io/mind-ar-js-doc/tools/compile/','_blank')">Open .mind Generator</button>
+  <div class="instruction">
+    <p><strong>Step 1:</strong> Get your secret code for upload.</p>
+    <p><strong>Step 2:</strong> Create a .mind file using the generator.</p>
+    <p><strong>Step 3:</strong> Download the <code>.mind</code> file.</p>
+    <p><strong>Step 4:</strong> Enter the secret code and upload your photo, video, and .mind file.</p>
+  </div>
+  <form id="uploadForm" enctype="multipart/form-data">
+    <label for="photo"><img src="https://img.icons8.com/ios-filled/ffffff/camera.png"/> Photo (JPEG):</label>
+    <input type="file" name="photo" accept="image/jpeg" required>
+    <label for="video"><img src="https://img.icons8.com/ios-filled/ffffff/video.png"/> Video (MP4):</label>
+    <input type="file" name="video" accept="video/mp4" required>
+    <label for="mind"><img src="https://img.icons8.com/ios-filled/ffffff/puzzle.png"/> .mind File:</label>
+    <input type="file" name="mind" accept=".mind" required>
+    <label for="secretCode"><img src="https://img.icons8.com/ios-filled/ffffff/key.png"/> Secret Code:</label>
+    <input type="text" name="secretCode" placeholder="Enter secret code" required>
+    <button type="submit">Upload</button>
+  </form>
+  <div class="preview-container" id="previewContainer"></div>
+  <div id="progressBar"><div></div></div>
+  <div id="status"></div>
+  <div class="contact">
+    <a href="https://t.me/tommy8873" target="_blank" class="tg-btn-blue">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+        <path d="M120 0C53.7 0 0 53.7 0 120s53.7 120 120 120 120-53.7 120-120S186.3 0 120 0zm55.7 81.6l-20.3 95.8c-1.5 6.9-5.5 8.6-11.1 5.3l-30.7-22.7-14.8 14.3c-1.6 1.6-2.9 2.9-5.4 2.9l2-28.6 52-47.1c2.3-2 0.4-3.1-3.2-1.1l-64.3 40.5-27.7-8.6c-6-1.9-6.1-6-1.3-8.9l107.5-41.5c5-1.9 9.3 1.1 7.7 8.2z"/>
+      </svg>
+      Contact Creator
+    </a>
+  </div>
 </div>
 
 <script>
