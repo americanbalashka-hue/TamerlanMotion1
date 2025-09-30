@@ -30,7 +30,7 @@ body {
   padding: 18px 40px;
   font-size: 20px;
   font-weight: bold;
-  background: #ff9900; /* PornHub orange */
+  background: #ff9900;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -49,6 +49,7 @@ a-scene {
 <body>
 <div id="container">
   <button id="startButton">Нажмите, чтобы включить</button>
+
   <a-scene mindar-image="imageTargetSrc: {{MIND_FILE}};" embedded color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
@@ -59,19 +60,22 @@ a-scene {
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <!-- фиксированные размеры под фото 600x900 -->
-      <a-video id="videoPlane" src="#video1" width="0.6" height="0.9" material="opacity: 0.65"></a-video>
+
+    <a-entity mindar-image-target="targetIndex: 0" id="targetEntity">
+      <a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
     </a-entity>
+
   </a-scene>
 </div>
+
 <script>
 const button = document.getElementById('startButton');
 const videoEl = document.getElementById('video1');
 const videoPlane = document.getElementById('videoPlane');
-const targetEntity = document.querySelector('[mindar-image-target]');
+const targetEntity = document.getElementById('targetEntity');
 let isPlaying = false;
 
+// Кнопка запуска камеры
 button.addEventListener('click', async () => {
   try {
     videoEl.muted = true;
@@ -85,9 +89,22 @@ button.addEventListener('click', async () => {
   }
 });
 
-// убрал динамическое вычисление, теперь размеры жёстко заданы выше
+// Автоподстройка видео под размеры цели
 targetEntity.addEventListener('targetFound', () => {
-  if (!isPlaying) {
+  const targetComp = targetEntity.components['mindar-image-target'];
+  if(targetComp && targetComp.el.object3D.children[0]){
+    const targetObj = targetComp.el.object3D.children[0];
+
+    // Получаем реальные размеры цели через BoundingBox
+    const bbox = new THREE.Box3().setFromObject(targetObj);
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+
+    videoPlane.setAttribute('width', size.x);
+    videoPlane.setAttribute('height', size.y);
+  }
+
+  if(!isPlaying){
     videoEl.muted = false;
     videoEl.currentTime = 0;
     videoEl.play();
