@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
@@ -30,7 +30,7 @@ body {
   padding: 18px 40px;
   font-size: 20px;
   font-weight: bold;
-  background: #ff9900;
+  background: #ff9900; /* PornHub orange */
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -49,70 +49,55 @@ a-scene {
 <body>
 <div id="container">
   <button id="startButton">Нажмите, чтобы включить</button>
-
   <a-scene mindar-image="imageTargetSrc: {{MIND_FILE}};" embedded color-space="sRGB"
     renderer="colorManagement: true, physicallyCorrectLights"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
     <a-assets>
-      <video id="video1" src="{{VIDEO_FILE}}" preload="auto" playsinline webkit-playsinline muted loop></video>
+      <video id="video1" src="{{VIDEO_FILE}}" preload="auto" playsinline webkit-playsinline muted></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-    <a-entity mindar-image-target="targetIndex: 0" id="targetEntity">
-      <a-video id="videoPlane" src="#video1" material="opacity: 0.8"></a-video>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
     </a-entity>
-
   </a-scene>
 </div>
-
 <script>
 const button = document.getElementById('startButton');
 const videoEl = document.getElementById('video1');
 const videoPlane = document.getElementById('videoPlane');
-const targetEntity = document.getElementById('targetEntity');
+const targetEntity = document.querySelector('[mindar-image-target]');
 let isPlaying = false;
 
-// Запуск камеры и видео после клика
 button.addEventListener('click', async () => {
   try {
-    videoEl.muted = true; 
+    videoEl.muted = true;
     await videoEl.play();
+    videoEl.pause();
+    videoEl.currentTime = 0;
     button.style.display = 'none';
-  } catch(err){
+  } catch(err) {
     console.error(err);
-    alert('Не удалось запустить камеру/видео');
+    alert('Не удалось включить камеру');
   }
 });
 
-// Автоподстройка видео под цель с сохранением пропорций
+videoEl.addEventListener('loadedmetadata', () => {
+  const aspect = videoEl.videoWidth / videoEl.videoHeight;
+  const baseWidth = 1; 
+  const baseHeight = baseWidth / aspect;
+  videoPlane.setAttribute('width', baseWidth);
+  videoPlane.setAttribute('height', baseHeight);
+});
+
 targetEntity.addEventListener('targetFound', () => {
   if (!isPlaying) {
     videoEl.muted = false;
     videoEl.currentTime = 0;
-    videoEl.play().catch(e => console.log(e));
+    videoEl.play();
     isPlaying = true;
-  }
-
-  const targetObj = targetEntity.object3D.children[0];
-  if(targetObj){
-    const bbox = new THREE.Box3().setFromObject(targetObj);
-    const targetSize = new THREE.Vector3();
-    bbox.getSize(targetSize);
-
-    // Сохраняем пропорции видео
-    const aspect = videoEl.videoWidth / videoEl.videoHeight;
-    let width = targetSize.x;
-    let height = width / aspect;
-    if(height > targetSize.y){
-      height = targetSize.y;
-      width = height * aspect;
-    }
-
-    videoPlane.setAttribute('width', width);
-    videoPlane.setAttribute('height', height);
   }
 });
 
