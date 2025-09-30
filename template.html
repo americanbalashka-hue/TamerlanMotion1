@@ -56,13 +56,13 @@ a-scene {
     device-orientation-permission-ui="enabled: false">
 
     <a-assets>
-      <video id="video1" src="{{VIDEO_FILE}}" preload="auto" playsinline webkit-playsinline muted></video>
+      <video id="video1" src="{{VIDEO_FILE}}" preload="auto" playsinline webkit-playsinline muted loop></video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0" id="targetEntity">
-      <a-video id="videoPlane" src="#video1" material="opacity: 0.65"></a-video>
+      <a-video id="videoPlane" src="#video1" material="opacity: 0.8"></a-video>
     </a-entity>
 
   </a-scene>
@@ -75,40 +75,44 @@ const videoPlane = document.getElementById('videoPlane');
 const targetEntity = document.getElementById('targetEntity');
 let isPlaying = false;
 
-// Кнопка запуска камеры
+// Запуск камеры и видео после клика
 button.addEventListener('click', async () => {
   try {
-    videoEl.muted = true;
+    videoEl.muted = true; 
     await videoEl.play();
-    videoEl.pause();
-    videoEl.currentTime = 0;
     button.style.display = 'none';
-  } catch(err) {
+  } catch(err){
     console.error(err);
-    alert('Не удалось включить камеру');
+    alert('Не удалось запустить камеру/видео');
   }
 });
 
-// Автоподстройка видео под размеры цели
+// Автоподстройка видео под цель с сохранением пропорций
 targetEntity.addEventListener('targetFound', () => {
-  const targetComp = targetEntity.components['mindar-image-target'];
-  if(targetComp && targetComp.el.object3D.children[0]){
-    const targetObj = targetComp.el.object3D.children[0];
-
-    // Получаем реальные размеры цели через BoundingBox
-    const bbox = new THREE.Box3().setFromObject(targetObj);
-    const size = new THREE.Vector3();
-    bbox.getSize(size);
-
-    videoPlane.setAttribute('width', size.x);
-    videoPlane.setAttribute('height', size.y);
-  }
-
-  if(!isPlaying){
+  if (!isPlaying) {
     videoEl.muted = false;
     videoEl.currentTime = 0;
-    videoEl.play();
+    videoEl.play().catch(e => console.log(e));
     isPlaying = true;
+  }
+
+  const targetObj = targetEntity.object3D.children[0];
+  if(targetObj){
+    const bbox = new THREE.Box3().setFromObject(targetObj);
+    const targetSize = new THREE.Vector3();
+    bbox.getSize(targetSize);
+
+    // Сохраняем пропорции видео
+    const aspect = videoEl.videoWidth / videoEl.videoHeight;
+    let width = targetSize.x;
+    let height = width / aspect;
+    if(height > targetSize.y){
+      height = targetSize.y;
+      width = height * aspect;
+    }
+
+    videoPlane.setAttribute('width', width);
+    videoPlane.setAttribute('height', height);
   }
 });
 
