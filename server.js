@@ -7,7 +7,6 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 import { Octokit } from "@octokit/rest";
 import dotenv from "dotenv";
-import { execSync } from "child_process";
 
 dotenv.config();
 
@@ -44,11 +43,16 @@ app.post(
   upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "video", maxCount: 1 },
+    { name: "mind", maxCount: 1 },
     { name: "secretCode", maxCount: 1 },
   ]),
   async (req, res) => {
     try {
-      const code = req.body.secretCode;
+      const code =
+        req.body.secretCode ||
+        (req.files.secretCode && req.files.secretCode[0].buffer.toString());
+
+      // Проверка кода
       if (!code || !codes[code]) {
         return res.status(403).send("Неверный или просроченный секретный код");
       }
@@ -61,24 +65,20 @@ app.post(
       const clientFolder = path.join(CLIENTS_DIR, `client${timestamp}`);
       fs.mkdirSync(clientFolder);
 
-      const { photo, video } = req.files;
+      const { photo, video, mind } = req.files;
 
-      // Сохраняем фото
       const photoPath = path.join(clientFolder, photo[0].originalname);
-      fs.writeFileSync(photoPath, photo[0].buffer);
-
-      // Генерация .mind из фото
-      const mindPath = path.join(clientFolder, "target.mind");
-      execSync(`node_modules/.bin/mindar-image "${photoPath}" -o "${mindPath}"`);
-
-      // Сохраняем видео
       const videoPath = path.join(clientFolder, video[0].originalname);
+      const mindPath = path.join(clientFolder, mind[0].originalname);
+
+      fs.writeFileSync(photoPath, photo[0].buffer);
       fs.writeFileSync(videoPath, video[0].buffer);
+      fs.writeFileSync(mindPath, mind[0].buffer);
 
       // Подставляем файлы в шаблон
       let template = fs.readFileSync("template.html", "utf-8");
       template = template
-        .replace("{{MIND_FILE}}", "target.mind")
+        .replace("{{MIND_FILE}}", mind[0].originalname)
         .replace("{{VIDEO_FILE}}", video[0].originalname);
 
       fs.writeFileSync(path.join(clientFolder, "index.html"), template);
@@ -88,7 +88,7 @@ app.post(
       const qrPath = path.join(clientFolder, "qr.png");
       await QRCode.toFile(qrPath, clientUrl, { width: 200 });
 
-      // Накладываем QR на фото
+      // QR на фото
       const image = await Jimp.read(photoPath);
       const qrImage = await Jimp.read(qrPath);
       qrImage.resize(200, 200);
@@ -96,7 +96,7 @@ app.post(
       const finalPhotoPath = path.join(clientFolder, "final_with_qr.jpg");
       await image.writeAsync(finalPhotoPath);
 
-      // Публикация файлов на GitHub Pages
+      // Публикация на GitHub Pages
       const files = fs.readdirSync(clientFolder);
       for (const file of files) {
         const content = fs.readFileSync(path.join(clientFolder, file), {
@@ -115,12 +115,12 @@ app.post(
 <h3>Готово ✅</h3>
 <p>Ссылка для клиента: <a href="${clientUrl}" target="_blank">${clientUrl}</a></p>
 <p>QR-код встроен в фото:</p>
-<a href="${clientUrl.replace("index.html", "final_with_qr.jpg")}" download>
-<img src="${clientUrl.replace("index.html", "final_with_qr.jpg")}" width="400">
+<a href="/client${timestamp}/final_with_qr.jpg" download>
+<img src="/client${timestamp}/final_with_qr.jpg" width="400">
 </a>
 `);
     } catch (err) {
-      console.error("Ошибка:", err);
+      console.error(err);
       res.status(500).send("Ошибка при обработке ❌");
     }
   }
